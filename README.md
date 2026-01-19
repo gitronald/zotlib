@@ -19,6 +19,13 @@ zotlib/
 └── pyproject.toml               # Poetry configuration
 ```
 
+## TODO
+
+- [ ] Use polars throughout
+- [ ] Add schema for Zotero db tables
+- [ ] Organize JavaScript files
+- [ ] Explore ways to update records via JavaScript
+
 ## Python Library
 
 Extract bibliographic data from Zotero SQLite databases and format as APA references.
