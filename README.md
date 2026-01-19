@@ -8,8 +8,8 @@ Extract bibliographic data from Zotero SQLite databases and format as APA refere
 
 ### TODO
 
-- [ ] Test CLI with actual Zotero database (`zotlib tables`, `zotlib collections`, `zotlib extract`)
-- [ ] Verify extraction and APA formatting output
+- [x] Test CLI with actual Zotero database (`zotlib tables`, `zotlib collections`, `zotlib extract`)
+- [x] Verify extraction and APA formatting output
 - [ ] Clean up old `zotero/` scripts (zotero.py, apa.py, analysis.py, requirements.txt)
 
 ### Installation
