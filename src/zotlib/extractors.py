@@ -12,15 +12,17 @@ def extract_items(db: ZoteroDatabase) -> pd.DataFrame:
     to reconstruct full item metadata.
     """
     # Get base items
-    items = db.query("SELECT * FROM items", ["items"])
+    items = db.query("SELECT * FROM items")
 
     # Get item details by joining itemData -> fieldsCombined -> itemDataValues
     details_query = """
-    SELECT * FROM itemData
+    SELECT itemData.itemID, itemData.fieldID, itemData.valueID,
+           fieldsCombined.fieldName, itemDataValues.value
+    FROM itemData
     LEFT JOIN fieldsCombined ON itemData.fieldID = fieldsCombined.fieldID
     LEFT JOIN itemDataValues ON itemData.valueID = itemDataValues.valueID
     """
-    entries = db.query(details_query, ["itemData", "fieldsCombined", "itemDataValues"])
+    entries = db.query(details_query)
 
     # Pivot field names to columns
     details = entries.pivot(index="itemID", columns="fieldName", values="value")
@@ -41,30 +43,36 @@ def extract_items(db: ZoteroDatabase) -> pd.DataFrame:
 
 def extract_itemtypes(db: ZoteroDatabase) -> pd.DataFrame:
     """Extract item type definitions."""
-    return db.query("SELECT * FROM itemTypes", ["itemTypes"])
+    return db.query("SELECT * FROM itemTypes")
 
 
 def extract_creators(db: ZoteroDatabase) -> pd.DataFrame:
     """Extract item-creator relationships with creator details."""
     query = """
-    SELECT * FROM itemCreators
+    SELECT itemCreators.itemID, itemCreators.creatorID, itemCreators.creatorTypeID,
+           itemCreators.orderIndex, creators.firstName, creators.lastName,
+           creators.fieldMode
+    FROM itemCreators
     LEFT JOIN creators ON itemCreators.creatorID = creators.creatorID
     """
-    return db.query(query, ["itemCreators", "creators"])
+    return db.query(query)
 
 
 def extract_collections(db: ZoteroDatabase) -> pd.DataFrame:
     """Extract collection memberships with collection metadata."""
     query = """
-    SELECT * FROM collectionItems
+    SELECT collectionItems.collectionID, collectionItems.itemID,
+           collectionItems.orderIndex, collections.collectionName,
+           collections.parentCollectionID, collections.libraryID
+    FROM collectionItems
     LEFT JOIN collections ON collectionItems.collectionID = collections.collectionID
     """
-    return db.query(query, ["collectionItems", "collections"])
+    return db.query(query)
 
 
 def extract_libraries(db: ZoteroDatabase) -> pd.DataFrame:
     """Extract library metadata."""
-    return db.query("SELECT * FROM libraries", ["libraries"])
+    return db.query("SELECT * FROM libraries")
 
 
 def _get_first_notnull(row: pd.Series) -> str | None:

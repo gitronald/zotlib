@@ -7,8 +7,6 @@ from typing import Iterator
 
 import pandas as pd
 
-from zotlib.utils import unlist
-
 
 class ZoteroDatabase:
     """Read-only interface to Zotero SQLite database."""
@@ -53,28 +51,14 @@ class ZoteroDatabase:
             cursor.execute(f"SELECT * FROM {table_name} LIMIT 0")
             return [desc[0] for desc in cursor.description]
 
-    def query(
-        self,
-        sql: str,
-        table_names: list[str] | None = None,
-    ) -> pd.DataFrame:
+    def query(self, sql: str) -> pd.DataFrame:
         """Execute a query and return results as DataFrame.
 
         Args:
             sql: SQL query string.
-            table_names: Optional list of table names to extract column names from.
-                        If not provided, uses cursor description.
 
         Returns:
             DataFrame with query results.
         """
         with self.connection() as conn:
-            cursor = conn.cursor()
-            rows = cursor.execute(sql).fetchall()
-
-            if table_names:
-                cols = unlist([self.get_column_names(t) for t in table_names])
-            else:
-                cols = [desc[0] for desc in cursor.description]
-
-            return pd.DataFrame(rows, columns=cols)
+            return pd.read_sql_query(sql, conn)
