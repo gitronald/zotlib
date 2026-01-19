@@ -14,7 +14,7 @@ dependencies = [
 zotlib = "zotlib.cli:app"
 
 [tool.poetry]
-packages = [{include = "zotlib", from = "src"}]
+packages = [{include = "zotlib"}]
 
 [tool.poetry.group.dev]
 optional = true
