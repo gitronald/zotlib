@@ -12,10 +12,11 @@ zotlib/
 │   ├── database.py              # SQLite interface
 │   ├── extractors.py            # Data extraction functions
 │   └── formatters/apa.py        # APA citation formatter
+├── zotero-js/                   # Zotero JavaScript scripts
+│   ├── extract-annotations.js   # Interactive annotation extractor
+│   ├── extract-annotations-cli.js
+│   └── run-extract.sh           # Shell wrapper
 ├── tests/                       # Test suite
-├── extract-annotations.js       # Zotero JS annotation extractor
-├── extract-annotations-cli.js   # CLI version for automation
-├── run-extract.sh               # Shell wrapper
 └── pyproject.toml               # Poetry configuration
 ```
 
@@ -23,7 +24,7 @@ zotlib/
 
 - [ ] Use polars throughout
 - [ ] Add schema for Zotero db tables
-- [ ] Organize JavaScript files
+- [x] Organize JavaScript files
 - [ ] Explore ways to update records via JavaScript
 
 ## Python Library
@@ -166,7 +167,7 @@ Example: `My_Research_Paper_2026-01-17T14-30-00.md`
 ### Usage
 
 ```bash
-./run-extract.sh
+./zotero-js/run-extract.sh
 ```
 
 ### How It Works
@@ -176,7 +177,7 @@ The script sends the JavaScript file to Zotero's local debug endpoint:
 ```bash
 curl -X POST "http://127.0.0.1:23119/debug" \
     -H "Content-Type: application/javascript" \
-    --data-binary @extract-annotations-cli.js
+    --data-binary @zotero-js/extract-annotations-cli.js
 ```
 
 ---
