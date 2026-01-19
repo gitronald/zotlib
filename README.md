@@ -1,6 +1,62 @@
-# Zotero 7 Annotation Extraction Scripts
+# zotlib
 
-JavaScript utilities for extracting PDF annotations from Zotero 7 and saving them as markdown files.
+Tools for extracting and formatting bibliographic data from Zotero databases.
+
+## Python Library
+
+Extract bibliographic data from Zotero SQLite databases and format as APA references.
+
+### TODO
+
+- [ ] Test CLI with actual Zotero database (`zotlib tables`, `zotlib collections`, `zotlib extract`)
+- [ ] Verify extraction and APA formatting output
+- [ ] Clean up old `zotero/` scripts (zotero.py, apa.py, analysis.py, requirements.txt)
+
+### Installation
+
+```bash
+poetry install
+```
+
+### Configuration
+
+The database path can be configured via:
+
+1. **CLI flag**: `--database /path/to/zotero.sqlite`
+2. **Environment variable**: `ZOTERO_DATABASE=/path/to/zotero.sqlite`
+3. **Auto-discovery**: Checks common locations (Linux, WSL, macOS)
+
+### CLI Commands
+
+```bash
+# Extract all data with auto-discovered database
+zotlib extract
+
+# Extract CV items from a specific collection as APA
+zotlib extract -c rer -f apa
+
+# List available collections
+zotlib collections
+
+# List database tables (debugging)
+zotlib tables
+```
+
+### Python API
+
+```python
+from zotlib import ZoteroDatabase, extract_cv_items, format_cv_as_apa
+
+db = ZoteroDatabase("/path/to/zotero.sqlite")
+items = extract_cv_items(db, collection_name="mypapers")
+apa_output = format_cv_as_apa(items, output_path="output/apa.md")
+```
+
+---
+
+# JavaScript Annotation Extraction Scripts
+
+Utilities for extracting PDF annotations from Zotero 7 and saving them as markdown files.
 
 ## File Structure
 
