@@ -11,11 +11,16 @@ zotlib/
 │   ├── config.py                # Database path discovery
 │   ├── database.py              # SQLite interface
 │   ├── extractors.py            # Data extraction functions
+│   ├── schema.py                # Zotero database schema definitions
 │   └── formatters/apa.py        # APA citation formatter
 ├── zotero-js/                   # Zotero JavaScript scripts
 │   ├── extract-annotations.js   # Interactive annotation extractor
 │   ├── extract-annotations-cli.js
 │   └── run-extract.sh           # Shell wrapper
+├── scripts/                     # Utility scripts
+│   └── generate_schema_docs.py  # Generate docs/schema.md
+├── docs/                        # Documentation
+│   └── schema.md                # Database schema reference
 ├── tests/                       # Test suite
 └── pyproject.toml               # Poetry configuration
 ```
@@ -23,7 +28,7 @@ zotlib/
 ## TODO
 
 - [ ] Use polars throughout
-- [ ] Add schema for Zotero db tables
+- [x] Add schema for Zotero db tables (include types)
 - [x] Organize JavaScript files
 - [ ] Explore ways to update records via JavaScript
 
