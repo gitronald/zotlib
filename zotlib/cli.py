@@ -64,12 +64,12 @@ def extract(
         console.print(f"Extracted {len(items)} items from '{collection}' collection")
 
         if format in ("csv", "both"):
-            csv_path = output_dir / "cv.csv"
+            csv_path = output_dir / f"{collection}.csv"
             items.to_csv(csv_path, index=False)
             console.print(f"Saved: {csv_path}")
 
         if format in ("apa", "both"):
-            apa_path = output_dir / "apa.md"
+            apa_path = output_dir / f"{collection}-apa.md"
             format_cv_as_apa(items, apa_path)
             console.print(f"Saved: {apa_path}")
     else:
