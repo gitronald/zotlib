@@ -1,18 +1,86 @@
-# Zotero 7 Annotation Extraction Scripts
+# zotlib
 
-JavaScript utilities for extracting PDF annotations from Zotero 7 and saving them as markdown files.
+Tools for extracting and formatting bibliographic data from Zotero databases.
 
-## File Structure
+## Project Structure
 
 ```
-zotero/
-├── extract-annotations.js       # Interactive version with file picker dialog
-├── extract-annotations-cli.js   # CLI version, writes to fixed directory
-├── extract-annotations-debug.js # Debug script for troubleshooting
-└── run-extract.sh               # Shell wrapper for CLI execution
+zotlib/
+├── zotlib/                      # Python library
+│   ├── cli.py                   # CLI commands
+│   ├── config.py                # Database path discovery
+│   ├── database.py              # SQLite interface
+│   ├── extractors.py            # Data extraction functions
+│   ├── schema.py                # Zotero database schema definitions
+│   └── formatters/apa.py        # APA citation formatter
+├── zotero-js/                   # Zotero JavaScript scripts
+│   ├── extract-annotations.js   # Interactive annotation extractor
+│   ├── extract-annotations-cli.js
+│   └── run-extract.sh           # Shell wrapper
+├── scripts/                     # Utility scripts
+│   └── generate_schema_docs.py  # Generate docs/schema.md
+├── docs/                        # Documentation
+│   └── schema.md                # Database schema reference
+├── tests/                       # Test suite
+└── pyproject.toml               # Poetry configuration
+```
+
+## TODO
+
+- [ ] Use polars throughout
+- [x] Add schema for Zotero db tables (include types)
+- [x] Organize JavaScript files
+- [ ] Explore ways to update records via JavaScript
+
+## Python Library
+
+Extract bibliographic data from Zotero SQLite databases and format as APA references.
+
+### Installation
+
+```bash
+poetry install
+```
+
+### Configuration
+
+The database path can be configured via:
+
+1. **CLI flag**: `--database /path/to/zotero.sqlite`
+2. **Environment variable**: `ZOTERO_DATABASE=/path/to/zotero.sqlite`
+3. **Auto-discovery**: Checks common locations (Linux, WSL, macOS)
+
+### CLI Commands
+
+```bash
+# Extract all data with auto-discovered database
+zotlib extract
+
+# Extract CV items from a specific collection as APA
+zotlib extract -c rer -f apa
+
+# List available collections
+zotlib collections
+
+# List database tables (debugging)
+zotlib tables
+```
+
+### Python API
+
+```python
+from zotlib import ZoteroDatabase, extract_cv_items, format_cv_as_apa
+
+db = ZoteroDatabase("/path/to/zotero.sqlite")
+items = extract_cv_items(db, collection_name="mypapers")
+apa_output = format_cv_as_apa(items, output_path="output/apa.md")
 ```
 
 ---
+
+# JavaScript Annotation Extraction Scripts
+
+Utilities for extracting PDF annotations from Zotero 7 and saving them as markdown files.
 
 ## extract-annotations.js
 
@@ -104,7 +172,7 @@ Example: `My_Research_Paper_2026-01-17T14-30-00.md`
 ### Usage
 
 ```bash
-./run-extract.sh
+./zotero-js/run-extract.sh
 ```
 
 ### How It Works
@@ -114,7 +182,7 @@ The script sends the JavaScript file to Zotero's local debug endpoint:
 ```bash
 curl -X POST "http://127.0.0.1:23119/debug" \
     -H "Content-Type: application/javascript" \
-    --data-binary @extract-annotations-cli.js
+    --data-binary @zotero-js/extract-annotations-cli.js
 ```
 
 ---
