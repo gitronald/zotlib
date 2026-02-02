@@ -102,11 +102,8 @@ def _clean_items(items: pd.DataFrame) -> pd.DataFrame:
     items["date_raw"] = items["date"].copy()
     items["datefmt"] = items["date_raw"].fillna("").str.split(" ", expand=True)[0]
 
-    # Handle malformed dates like "2003-01-00"
-    mask = items.datefmt.str.endswith("00")
-    items.loc[mask, "datefmt"] = (
-        items.loc[mask, "datefmt"].str.split("-", expand=True)[0]
-    )
+    # Handle malformed dates like "2003-01-00" or "2020-00-00"
+    items["datefmt"] = items["datefmt"].str.replace("-00", "-01", regex=False)
 
     items["date"] = pd.to_datetime(items["datefmt"], errors="coerce")
     items["year"] = items.date.dt.year
