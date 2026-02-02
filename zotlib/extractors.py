@@ -102,11 +102,8 @@ def _clean_items(items: pd.DataFrame) -> pd.DataFrame:
     items["date_raw"] = items["date"].copy()
     items["datefmt"] = items["date_raw"].fillna("").str.split(" ", expand=True)[0]
 
-    # Handle malformed dates like "2003-01-00"
-    mask = items.datefmt.str.endswith("00")
-    items.loc[mask, "datefmt"] = (
-        items.loc[mask, "datefmt"].str.split("-", expand=True)[0]
-    )
+    # Handle malformed dates like "2003-01-00" or "2020-00-00"
+    items["datefmt"] = items["datefmt"].str.replace("-00", "-01", regex=False)
 
     items["date"] = pd.to_datetime(items["datefmt"], errors="coerce")
     items["year"] = items.date.dt.year
@@ -127,6 +124,22 @@ def _add_authors(items: pd.DataFrame, creators: pd.DataFrame) -> pd.DataFrame:
         lambda x: ", ".join(x)
     )
     return items.merge(item_creators, how="left", on="itemID")
+
+
+def extract_attachments(db: ZoteroDatabase) -> pd.DataFrame:
+    """Extract PDF attachment paths with parent item and storage key.
+
+    Returns DataFrame with: parentItemID, key (storage directory), path (filename).
+    """
+    query = """
+    SELECT items.itemID, items.key, itemAttachments.parentItemID,
+           itemAttachments.contentType, itemAttachments.path
+    FROM itemAttachments
+    JOIN items ON itemAttachments.itemID = items.itemID
+    WHERE itemAttachments.contentType = 'application/pdf'
+    AND itemAttachments.path IS NOT NULL
+    """
+    return db.query(query)
 
 
 def extract_cv_items(
@@ -168,6 +181,7 @@ def extract_cv_items(
         "pages",
         "DOI",
         "url",
+        "repository",
     ]
     existing_cols = [c for c in cols_main if c in cv_items.columns]
 
