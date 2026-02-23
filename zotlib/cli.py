@@ -201,7 +201,7 @@ def covers(
     """Generate first-page cover images for PDFs in a collection.
 
     Examples:
-        zotlib covers -c publications -b /mnt/i/My\ Drive/zotero-pdfs/
+        zotlib covers -c publications -b "/mnt/i/My Drive/zotero-pdfs/"
         zotlib covers -c mypapers -o covers/ --dpi 150
     """
     db_path = get_database_path(database)
