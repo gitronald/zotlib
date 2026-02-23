@@ -22,7 +22,7 @@ zotlib/
 ├── docs/                        # Documentation
 │   └── schema.md                # Database schema reference
 ├── tests/                       # Test suite
-└── pyproject.toml               # Poetry configuration
+└── pyproject.toml               # Project configuration
 ```
 
 ## TODO
@@ -39,7 +39,7 @@ Extract bibliographic data from Zotero SQLite databases and format as APA refere
 ### Installation
 
 ```bash
-poetry install
+uv sync
 ```
 
 ### Configuration
