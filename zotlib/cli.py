@@ -18,6 +18,7 @@ from zotlib.extractors import (
     extract_libraries,
     extract_cv_items,
 )
+from zotlib.backup import create_backup, default_backup_path
 from zotlib.covers import generate_covers, generate_thumbnails
 from zotlib.formatters.apa import format_cv_as_apa
 from zotlib.schema import ALL_SCHEMAS
@@ -261,6 +262,34 @@ def thumbnails(
 
     count = generate_thumbnails(input_dir, output_dir, width=width)
     console.print(f"Generated {count} thumbnails ({width}px wide) in {output_dir}")
+
+
+@app.command()
+def backup(
+    database: Annotated[
+        Optional[Path],
+        typer.Option("--database", "-d", help="Path to zotero.sqlite"),
+    ] = None,
+    output: Annotated[
+        Optional[Path],
+        typer.Option("--output", "-o", help="Output archive path"),
+    ] = None,
+):
+    """Back up the Zotero data directory as a .tar.bz2 archive.
+
+    Examples:
+        zotlib backup
+        zotlib backup -o ~/backups/zotero-2026-03-02.tar.bz2
+        zotlib backup -d /path/to/zotero.sqlite
+    """
+    db_path = get_database_path(database)
+    source_dir = db_path.parent
+
+    if output is None:
+        output = default_backup_path()
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    create_backup(source_dir, output, console)
 
 
 if __name__ == "__main__":

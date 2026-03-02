@@ -11,6 +11,7 @@ zotlib/
 │   ├── config.py                # Database path discovery
 │   ├── database.py              # SQLite interface
 │   ├── extractors.py            # Data extraction functions
+│   ├── backup.py                # Zotero directory backup
 │   ├── schema.py                # Zotero database schema definitions
 │   └── formatters/apa.py        # APA citation formatter
 ├── zotero-js/                   # Zotero JavaScript scripts
@@ -64,6 +65,10 @@ zotlib collections
 
 # List database tables (debugging)
 zotlib tables
+
+# Back up the Zotero data directory
+zotlib backup
+zotlib backup -o ~/backups/zotero-2026-03-02.tar.bz2
 ```
 
 ### Python API
