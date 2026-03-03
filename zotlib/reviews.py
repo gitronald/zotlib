@@ -47,6 +47,13 @@ COLOR_LABELS = {
 }
 
 
+def _str_or(value, default: str = "") -> str:
+    """Coerce a value to string, returning default for NaN/None."""
+    if pd.isna(value):
+        return default
+    return str(value) if value else default
+
+
 def get_color_label(color: str) -> str:
     """Map a Zotero hex color to a readable label."""
     if not color:
@@ -149,13 +156,13 @@ def make_review_dirname(item_row: pd.Series) -> str:
 
     Format: {first-author-last}-{year}-{short-title}
     """
-    authors = item_row.get("authors", "") or ""
+    authors = _str_or(item_row.get("authors"))
     first_author = authors.split(",")[0].strip().split()[-1] if authors else "unknown"
 
     year = item_row.get("year")
     year_str = str(int(year)) if pd.notna(year) else "nd"
 
-    title = item_row.get("title", "") or "untitled"
+    title = _str_or(item_row.get("title"), "untitled")
     short_title = title[:60].strip()
 
     raw = f"{first_author}-{year_str}-{short_title}"
@@ -182,9 +189,9 @@ def bake_annotations(
 
     for _, ann in annotations_df.iterrows():
         ann_type = ANNOTATION_TYPES.get(ann["type"], "")
-        position_raw = ann.get("position", "")
-        comment = ann.get("comment", "") or ""
-        color = ann.get("color", "") or ""
+        position_raw = _str_or(ann.get("position"))
+        comment = _str_or(ann.get("comment"))
+        color = _str_or(ann.get("color"))
 
         # Parse position JSON
         try:
@@ -241,7 +248,7 @@ def bake_annotations(
             else:
                 point = fitz.Point(50, 50)
 
-            text = comment or ann.get("text", "") or ""
+            text = comment or _str_or(ann.get("text"))
             if text:
                 annot = page.add_text_annot(point, text)
                 if color:
@@ -274,15 +281,15 @@ def format_annotations_markdown(
     lines = []
 
     # YAML frontmatter
-    title = item_row.get("title", "Untitled") or "Untitled"
-    authors = item_row.get("authors", "") or ""
+    title = _str_or(item_row.get("title"), "Untitled")
+    authors = _str_or(item_row.get("authors"))
     year = item_row.get("year")
     year_str = str(int(year)) if pd.notna(year) else ""
-    publication = item_row.get("publicationTitle", "") or ""
-    doi = item_row.get("DOI", "") or ""
-    date_added = item_row.get("dateAdded", "") or ""
-    tags = item_row.get("tags", "") or ""
-    url = item_row.get("url", "") or ""
+    publication = _str_or(item_row.get("publicationTitle"))
+    doi = _str_or(item_row.get("DOI"))
+    date_added = _str_or(item_row.get("dateAdded"))
+    tags = _str_or(item_row.get("tags"))
+    url = _str_or(item_row.get("url"))
 
     lines.append("---")
     lines.append(f'title: "{title}"')
@@ -310,18 +317,18 @@ def format_annotations_markdown(
 
     for _, ann in annotations_df.iterrows():
         ann_type = ANNOTATION_TYPES.get(ann["type"], str(ann["type"]))
-        text = ann.get("text", "") or ""
-        comment = ann.get("comment", "") or ""
-        color = ann.get("color", "") or ""
+        text = _str_or(ann.get("text"))
+        comment = _str_or(ann.get("comment"))
+        color = _str_or(ann.get("color"))
 
         # Determine page number
-        position_raw = ann.get("position", "")
+        position_raw = _str_or(ann.get("position"))
         try:
             position = json.loads(position_raw) if position_raw else {}
         except (json.JSONDecodeError, TypeError):
             position = {}
 
-        page_label = ann.get("pageLabel", "")
+        page_label = _str_or(ann.get("pageLabel"))
         page_index = position.get("pageIndex", 0)
         page = int(page_label) if page_label else page_index + 1
 
@@ -411,19 +418,14 @@ def export_reviews(
 
     for _, item in items.iterrows():
         item_id = item["itemID"]
-        title = item.get("title", "untitled") or "untitled"
-
-        # Build subdirectory
-        dirname = make_review_dirname(item)
-        item_dir = output_dir / dirname
-        item_dir.mkdir(parents=True, exist_ok=True)
+        title = _str_or(item.get("title"), "untitled")
 
         # Find PDF attachment
         item_atts = attachments[attachments["parentItemID"] == item_id]
         item_anns = annotations[annotations["paperItemID"] == item_id]
 
-        has_pdf = False
         has_annotations = len(item_anns) > 0
+        pdf_path = None
 
         if not item_atts.empty:
             att = item_atts.iloc[0]
@@ -431,30 +433,39 @@ def export_reviews(
                 pdf_path = resolve_pdf_path(
                     storage_dir, att["key"], att["path"], base_dir=base_dir
                 )
+                if not pdf_path.exists():
+                    pdf_path = None
             except ValueError as e:
                 warnings.append(f"{title}: {e}")
-                pdf_path = None
 
-            if pdf_path and pdf_path.exists():
-                has_pdf = True
-                output_pdf = item_dir / "paper.pdf"
+        has_pdf = pdf_path is not None
 
-                if has_annotations:
-                    ann_warnings = bake_annotations(pdf_path, item_anns, output_pdf)
-                    warnings.extend(ann_warnings)
-                else:
-                    shutil.copy2(pdf_path, output_pdf)
+        # Skip items with nothing to export
+        if not has_pdf and not has_annotations:
+            skipped += 1
+            warnings.append(f"No PDF or annotations: {title}")
+            continue
+
+        # Build subdirectory only when there's content to export
+        dirname = make_review_dirname(item)
+        item_dir = output_dir / dirname
+        item_dir.mkdir(parents=True, exist_ok=True)
+
+        if has_pdf:
+            output_pdf = item_dir / "paper.pdf"
+
+            if has_annotations:
+                ann_warnings = bake_annotations(pdf_path, item_anns, output_pdf)
+                warnings.extend(ann_warnings)
+            else:
+                shutil.copy2(pdf_path, output_pdf)
 
         if has_annotations:
             md_content = format_annotations_markdown(item, item_anns)
             (item_dir / "annotations.md").write_text(md_content, encoding="utf-8")
 
-        if has_pdf or has_annotations:
-            exported += 1
-            if console:
-                console.print(f"  Exported: {dirname}")
-        else:
-            skipped += 1
-            warnings.append(f"No PDF or annotations: {title}")
+        exported += 1
+        if console:
+            console.print(f"  Exported: {dirname}")
 
     return exported, skipped, warnings
