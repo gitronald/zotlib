@@ -148,6 +148,45 @@ LIBRARIES = Table(
     },
 )
 
+# Annotation tables
+ITEM_ANNOTATIONS = Table(
+    name="itemAnnotations",
+    description="PDF annotations created in Zotero's built-in reader",
+    columns={
+        "itemID": Column("INTEGER", "Primary key (the annotation item)"),
+        "parentItemID": Column("INTEGER", "Foreign key to the PDF attachment item"),
+        "type": Column("INTEGER", "Annotation type (1=highlight, 2=note, 3=image, 5=underline)"),
+        "authorName": Column("TEXT", "Name of annotation author"),
+        "text": Column("TEXT", "Highlighted or selected text"),
+        "comment": Column("TEXT", "User comment on the annotation"),
+        "color": Column("TEXT", "Hex color string (e.g., #ffd400)"),
+        "pageLabel": Column("TEXT", "Page number label"),
+        "sortIndex": Column("TEXT", "Lexicographic sort index for ordering"),
+        "position": Column("TEXT", "JSON with pageIndex and rects/paths coordinates"),
+        "isExternal": Column("INTEGER", "Whether annotation is external (0 or 1)"),
+    },
+)
+
+# Tag tables
+ITEM_TAGS = Table(
+    name="itemTags",
+    description="Links items to tags",
+    columns={
+        "itemID": Column("INTEGER", "Foreign key to items"),
+        "tagID": Column("INTEGER", "Foreign key to tags"),
+        "type": Column("INTEGER", "Tag type (0=manual, 1=automatic)"),
+    },
+)
+
+TAGS = Table(
+    name="tags",
+    description="Tag definitions",
+    columns={
+        "tagID": Column("INTEGER", "Primary key"),
+        "name": Column("TEXT", "Tag display name"),
+    },
+)
+
 # All schemas for iteration
 ALL_SCHEMAS = [
     ITEMS,
@@ -160,6 +199,9 @@ ALL_SCHEMAS = [
     COLLECTION_ITEMS,
     COLLECTIONS,
     LIBRARIES,
+    ITEM_ANNOTATIONS,
+    ITEM_TAGS,
+    TAGS,
 ]
 
 

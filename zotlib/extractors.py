@@ -142,6 +142,28 @@ def extract_attachments(db: ZoteroDatabase) -> pd.DataFrame:
     return db.query(query)
 
 
+def extract_annotations(db: ZoteroDatabase) -> pd.DataFrame:
+    """Extract PDF annotations from itemAnnotations table.
+
+    Returns DataFrame with: itemID, parentItemID, type, text, comment,
+    color, pageLabel, sortIndex, position, isExternal.
+    """
+    return db.query("SELECT * FROM itemAnnotations")
+
+
+def extract_tags(db: ZoteroDatabase) -> pd.DataFrame:
+    """Extract item tags with tag names.
+
+    Returns DataFrame with: itemID, tagID, type, name.
+    """
+    query = """
+    SELECT itemTags.itemID, itemTags.tagID, itemTags.type, tags.name
+    FROM itemTags
+    JOIN tags ON itemTags.tagID = tags.tagID
+    """
+    return db.query(query)
+
+
 def extract_cv_items(
     db: ZoteroDatabase,
     collection_name: str,
