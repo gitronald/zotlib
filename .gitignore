@@ -16,7 +16,7 @@ build/
 
 # Data/output
 data/
-output/
+outputs/
 *.csv
 *.sqlite
 

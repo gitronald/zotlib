@@ -10,6 +10,7 @@ import pytest
 from zotlib.reviews import (
     ANNOTATION_TYPES,
     COLOR_LABELS,
+    _strip_review_prefix,
     bake_annotations,
     convert_zotero_rect,
     format_annotations_markdown,
@@ -280,3 +281,43 @@ class TestBakeAnnotations:
         output_pdf = tmp_path / "output.pdf"
         warnings = bake_annotations(simple_pdf, ann, output_pdf)
         assert any("out of range" in w for w in warnings)
+
+
+class TestStripReviewPrefix:
+    def test_strips_prefix(self):
+        assert _strip_review_prefix("REVIEW: Some Title") == "Some Title"
+
+    def test_case_insensitive(self):
+        assert _strip_review_prefix("Review: Some Title") == "Some Title"
+        assert _strip_review_prefix("review: some title") == "some title"
+
+    def test_no_prefix(self):
+        assert _strip_review_prefix("Some Title") == "Some Title"
+
+    def test_empty_string(self):
+        assert _strip_review_prefix("") == ""
+
+    def test_prefix_in_dirname(self):
+        row = pd.Series({
+            "authors": "John Smith",
+            "year": 2024,
+            "title": "REVIEW: A Study of Effects",
+        })
+        result = make_review_dirname(row)
+        assert "review" not in result
+        assert "a-study-of-effects" in result
+
+    def test_prefix_in_markdown(self):
+        item = pd.Series({
+            "itemID": 1,
+            "title": "REVIEW: Social Media Effects",
+            "authors": "Smith",
+            "year": 2024,
+        })
+        empty = pd.DataFrame(columns=[
+            "itemID", "type", "text", "comment", "color",
+            "pageLabel", "sortIndex", "position", "paperItemID",
+        ])
+        md = format_annotations_markdown(item, empty)
+        assert 'title: "Social Media Effects"' in md
+        assert "REVIEW:" not in md

@@ -107,6 +107,9 @@ def get_collection_items(
 
     coll_items = items.query("itemID in @coll['itemID']").copy()
 
+    # Exclude attachment and note types (handled separately)
+    coll_items = coll_items.query("typeName not in ['attachment', 'note']")
+
     # Add authors
     coll_items = _add_authors(coll_items, creators)
 
@@ -122,6 +125,40 @@ def get_collection_items(
     coll_items = _clean_items(coll_items)
 
     return coll_items
+
+
+def get_standalone_attachments(
+    db: ZoteroDatabase,
+    collection_name: str,
+) -> pd.DataFrame:
+    """Get standalone PDF attachments in a collection.
+
+    These are PDFs added directly to a collection without a parent item.
+
+    Args:
+        db: ZoteroDatabase instance.
+        collection_name: Name of the collection to filter by.
+
+    Returns:
+        DataFrame with itemID, key, path, and title columns.
+    """
+    query = """
+    SELECT i.itemID, i.key, ia.path, ia.contentType,
+           COALESCE(idv.value, ia.path) AS title
+    FROM collectionItems ci
+    JOIN collections c ON ci.collectionID = c.collectionID
+    JOIN items i ON ci.itemID = i.itemID
+    JOIN itemAttachments ia ON i.itemID = ia.itemID
+    LEFT JOIN itemData id ON i.itemID = id.itemID
+        AND id.fieldID = (SELECT fieldID FROM fieldsCombined WHERE fieldName = 'title')
+    LEFT JOIN itemDataValues idv ON id.valueID = idv.valueID
+    WHERE c.collectionName = ?
+      AND ia.parentItemID IS NULL
+      AND ia.contentType = 'application/pdf'
+      AND ia.path IS NOT NULL
+    """
+    with db.connection() as conn:
+        return pd.read_sql_query(query, conn, params=[collection_name])
 
 
 def get_item_annotations(
@@ -162,7 +199,7 @@ def make_review_dirname(item_row: pd.Series) -> str:
     year = item_row.get("year")
     year_str = str(int(year)) if pd.notna(year) else "nd"
 
-    title = _str_or(item_row.get("title"), "untitled")
+    title = _strip_review_prefix(_str_or(item_row.get("title"), "untitled"))
     short_title = title[:60].strip()
 
     raw = f"{first_author}-{year_str}-{short_title}"
@@ -281,7 +318,7 @@ def format_annotations_markdown(
     lines = []
 
     # YAML frontmatter
-    title = _str_or(item_row.get("title"), "Untitled")
+    title = _strip_review_prefix(_str_or(item_row.get("title"), "Untitled"))
     authors = _str_or(item_row.get("authors"))
     year = item_row.get("year")
     year_str = str(int(year)) if pd.notna(year) else ""
@@ -378,6 +415,77 @@ def format_annotations_markdown(
     return "\n".join(lines)
 
 
+def _strip_review_prefix(title: str) -> str:
+    """Strip 'REVIEW: ' prefix from a title if present."""
+    if title.upper().startswith("REVIEW: "):
+        return title[8:]
+    return title
+
+
+def _export_item(
+    item_row: pd.Series,
+    item_anns: pd.DataFrame,
+    pdf_path: Path | None,
+    output_dir: Path,
+    warnings: list[str],
+    console=None,
+) -> bool:
+    """Export a single item (PDF + markdown). Returns True if exported."""
+    title = _str_or(item_row.get("title"), "untitled")
+    has_annotations = len(item_anns) > 0
+    has_pdf = pdf_path is not None
+
+    if not has_pdf and not has_annotations:
+        warnings.append(f"No PDF or annotations: {title}")
+        return False
+
+    dirname = make_review_dirname(item_row)
+    item_dir = output_dir / dirname
+    item_dir.mkdir(parents=True, exist_ok=True)
+
+    if has_pdf:
+        output_pdf = item_dir / "paper.pdf"
+        if has_annotations:
+            ann_warnings = bake_annotations(pdf_path, item_anns, output_pdf)
+            warnings.extend(ann_warnings)
+        else:
+            shutil.copy2(pdf_path, output_pdf)
+
+    if has_annotations:
+        md_content = format_annotations_markdown(item_row, item_anns)
+        (item_dir / "annotations.md").write_text(md_content, encoding="utf-8")
+
+    if console:
+        console.print(f"  Exported: {dirname}")
+
+    return True
+
+
+def _resolve_item_pdf(
+    attachments: pd.DataFrame,
+    item_id: int,
+    storage_dir: Path,
+    base_dir: Path | None,
+    warnings: list[str],
+    title: str,
+) -> Path | None:
+    """Resolve the PDF path for a regular item via its attachments."""
+    item_atts = attachments[attachments["parentItemID"] == item_id]
+    if item_atts.empty:
+        return None
+
+    att = item_atts.iloc[0]
+    try:
+        pdf_path = resolve_pdf_path(
+            storage_dir, att["key"], att["path"], base_dir=base_dir
+        )
+        if pdf_path.exists():
+            return pdf_path
+    except ValueError as e:
+        warnings.append(f"{title}: {e}")
+    return None
+
+
 def export_reviews(
     db: ZoteroDatabase,
     collection_name: str,
@@ -386,6 +494,9 @@ def export_reviews(
     console=None,
 ) -> tuple[int, int, list[str]]:
     """Export review items with annotated PDFs and markdown.
+
+    Handles both regular items (with child attachments) and standalone
+    attachment items (PDFs added directly to the collection).
 
     Args:
         db: ZoteroDatabase instance.
@@ -400,14 +511,20 @@ def export_reviews(
     storage_dir = db.database_path.parent / "storage"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Get items in collection
+    # Get regular items in collection
     items = get_collection_items(db, collection_name)
-    if console:
-        console.print(f"Found {len(items)} items in '{collection_name}' collection")
-
     item_ids = set(items["itemID"])
 
-    # Get attachments and annotations
+    # Get standalone attachments in collection
+    standalone = get_standalone_attachments(db, collection_name)
+
+    if console:
+        console.print(
+            f"Found {len(items)} items and {len(standalone)} standalone PDFs "
+            f"in '{collection_name}' collection"
+        )
+
+    # Get attachments and annotations for regular items
     attachments = extract_attachments(db)
     attachments = attachments[attachments["parentItemID"].isin(item_ids)]
     annotations = get_item_annotations(db, item_ids)
@@ -416,56 +533,58 @@ def export_reviews(
     skipped = 0
     warnings = []
 
+    # Export regular items
     for _, item in items.iterrows():
         item_id = item["itemID"]
         title = _str_or(item.get("title"), "untitled")
-
-        # Find PDF attachment
-        item_atts = attachments[attachments["parentItemID"] == item_id]
         item_anns = annotations[annotations["paperItemID"] == item_id]
 
-        has_annotations = len(item_anns) > 0
-        pdf_path = None
+        pdf_path = _resolve_item_pdf(
+            attachments, item_id, storage_dir, base_dir, warnings, title
+        )
 
-        if not item_atts.empty:
-            att = item_atts.iloc[0]
-            try:
-                pdf_path = resolve_pdf_path(
-                    storage_dir, att["key"], att["path"], base_dir=base_dir
-                )
-                if not pdf_path.exists():
-                    pdf_path = None
-            except ValueError as e:
-                warnings.append(f"{title}: {e}")
-
-        has_pdf = pdf_path is not None
-
-        # Skip items with nothing to export
-        if not has_pdf and not has_annotations:
+        if _export_item(item, item_anns, pdf_path, output_dir, warnings, console):
+            exported += 1
+        else:
             skipped += 1
-            warnings.append(f"No PDF or annotations: {title}")
-            continue
 
-        # Build subdirectory only when there's content to export
-        dirname = make_review_dirname(item)
-        item_dir = output_dir / dirname
-        item_dir.mkdir(parents=True, exist_ok=True)
+    # Export standalone attachments
+    for _, att in standalone.iterrows():
+        att_id = att["itemID"]
+        title = _strip_review_prefix(
+            Path(att["title"]).stem if att["title"] else "untitled"
+        )
 
-        if has_pdf:
-            output_pdf = item_dir / "paper.pdf"
+        # Resolve PDF path
+        pdf_path = None
+        try:
+            pdf_path = resolve_pdf_path(
+                storage_dir, att["key"], att["path"], base_dir=base_dir
+            )
+            if not pdf_path.exists():
+                pdf_path = None
+        except ValueError as e:
+            warnings.append(f"{title}: {e}")
 
-            if has_annotations:
-                ann_warnings = bake_annotations(pdf_path, item_anns, output_pdf)
-                warnings.extend(ann_warnings)
-            else:
-                shutil.copy2(pdf_path, output_pdf)
+        # Get annotations directly on this attachment
+        att_anns_query = f"""
+        SELECT * FROM itemAnnotations
+        WHERE parentItemID = {att_id}
+        ORDER BY sortIndex
+        """
+        att_anns = db.query(att_anns_query)
 
-        if has_annotations:
-            md_content = format_annotations_markdown(item, item_anns)
-            (item_dir / "annotations.md").write_text(md_content, encoding="utf-8")
+        # Build a minimal item-like Series for directory naming and markdown
+        item_row = pd.Series({
+            "itemID": att_id,
+            "title": title,
+            "authors": "",
+            "year": float("nan"),
+        })
 
-        exported += 1
-        if console:
-            console.print(f"  Exported: {dirname}")
+        if _export_item(item_row, att_anns, pdf_path, output_dir, warnings, console):
+            exported += 1
+        else:
+            skipped += 1
 
     return exported, skipped, warnings
