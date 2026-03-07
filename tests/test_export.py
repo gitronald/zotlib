@@ -16,7 +16,7 @@ from zotlib.export import (
     format_annotations_markdown,
     get_color_label,
     hex_to_rgb,
-    make_review_dirname,
+    make_item_dirname,
 )
 
 
@@ -153,20 +153,20 @@ class TestAnnotationTypes:
         assert ANNOTATION_TYPES[5] == "underline"
 
 
-class TestMakeReviewDirname:
+class TestMakeItemDirname:
     def test_basic(self):
         row = pd.Series({"authors": "John Smith, Jane Doe", "year": 2024, "title": "A Study"})
-        result = make_review_dirname(row)
+        result = make_item_dirname(row)
         assert result == "smith-2024-a-study"
 
     def test_no_author(self):
         row = pd.Series({"authors": "", "year": 2024, "title": "Some Title"})
-        result = make_review_dirname(row)
+        result = make_item_dirname(row)
         assert result.startswith("unknown-2024-")
 
     def test_no_year(self):
         row = pd.Series({"authors": "John Smith", "year": float("nan"), "title": "Title"})
-        result = make_review_dirname(row)
+        result = make_item_dirname(row)
         assert "nd" in result
 
     def test_long_title_truncated(self):
@@ -175,7 +175,7 @@ class TestMakeReviewDirname:
             "year": 2024,
             "title": "A" * 100,
         })
-        result = make_review_dirname(row)
+        result = make_item_dirname(row)
         # 60 char title limit + author + year
         assert len(result) < 80
 
@@ -303,7 +303,7 @@ class TestStripReviewPrefix:
             "year": 2024,
             "title": "REVIEW: A Study of Effects",
         })
-        result = make_review_dirname(row)
+        result = make_item_dirname(row)
         assert "review" not in result
         assert "a-study-of-effects" in result
 

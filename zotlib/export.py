@@ -1,4 +1,4 @@
-"""Export review papers with annotations and markdown notes."""
+"""Export collection items with annotations and markdown notes."""
 
 import json
 import shutil
@@ -188,7 +188,7 @@ def get_item_annotations(
     return db.query(query)
 
 
-def make_review_dirname(item_row: pd.Series) -> str:
+def make_item_dirname(item_row: pd.Series) -> str:
     """Build a subdirectory name from item metadata.
 
     Format: {first-author-last}-{year}-{short-title}
@@ -477,7 +477,7 @@ def _export_item(
         warnings.append(f"No PDF or annotations: {title}")
         return False
 
-    dirname = make_review_dirname(item_row)
+    dirname = make_item_dirname(item_row)
     item_dir = output_dir / dirname
     item_dir.mkdir(parents=True, exist_ok=True)
 
@@ -507,14 +507,14 @@ def _export_item(
     return True
 
 
-def export_reviews(
+def export_collection(
     db: ZoteroDatabase,
     collection_name: str,
     output_dir: Path,
     base_dir: Path | None = None,
     console=None,
 ) -> tuple[int, int, list[str]]:
-    """Export review items with annotated PDFs and markdown.
+    """Export collection items with annotated PDFs and markdown.
 
     Handles both regular items (with child attachments) and standalone
     attachment items (PDFs added directly to the collection).

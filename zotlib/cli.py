@@ -21,7 +21,7 @@ from zotlib.extractors import (
 from zotlib.backup import create_backup, default_backup_path
 from zotlib.covers import generate_covers, generate_thumbnails
 from zotlib.formatters.apa import format_cv_as_apa
-from zotlib.export import export_reviews
+from zotlib.export import export_collection
 from zotlib.schema import ALL_SCHEMAS
 
 app = typer.Typer(
@@ -294,7 +294,7 @@ def backup(
 
 
 @app.command()
-def reviews(
+def export(
     database: Annotated[
         Optional[Path],
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
@@ -302,37 +302,37 @@ def reviews(
     output_dir: Annotated[
         Path,
         typer.Option("--output", "-o", help="Output directory"),
-    ] = Path("outputs/reviews"),
+    ] = Path("outputs/export"),
     collection: Annotated[
         str,
         typer.Option("--collection", "-c", help="Collection name"),
-    ] = "reviews",
+    ] = ...,
     base_dir: Annotated[
         Optional[Path],
         typer.Option("--base-dir", "-b", help="Base directory for linked attachments"),
     ] = None,
 ):
-    """Export review papers with baked annotations and markdown notes.
+    """Export collection with baked annotations and markdown notes.
 
     For each item in the collection, exports a subdirectory containing
     the PDF (with annotations baked in) and a markdown file with YAML
     frontmatter and annotation text.
 
     Examples:
-        zotlib reviews
-        zotlib reviews -c reviews -b "/mnt/i/My Drive/zotero-pdfs/"
-        zotlib reviews -o custom/output/path
+        zotlib export -c mycollection
+        zotlib export -c mycollection -b "/mnt/i/My Drive/zotero-pdfs/"
+        zotlib export -c mycollection -o custom/output/path
     """
     db_path = get_database_path(database)
     console.print(f"Using database: {db_path}")
 
     db = ZoteroDatabase(db_path)
 
-    exported, skipped, warnings = export_reviews(
+    exported, skipped, warnings = export_collection(
         db, collection, output_dir, base_dir=base_dir, console=console
     )
 
-    console.print(f"\nExported {exported} reviews to {output_dir}")
+    console.print(f"\nExported {exported} items to {output_dir}")
     if skipped:
         console.print(f"[yellow]Skipped {skipped} items (no PDF or annotations)[/yellow]")
     if warnings:
