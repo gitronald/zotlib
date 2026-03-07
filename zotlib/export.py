@@ -422,20 +422,58 @@ def _strip_review_prefix(title: str) -> str:
     return title
 
 
+def _resolve_attachment_pdfs(
+    attachments: pd.DataFrame,
+    item_id: int,
+    storage_dir: Path,
+    base_dir: Path | None,
+    warnings: list[str],
+    title: str,
+) -> list[tuple[int, Path]]:
+    """Resolve PDF paths for all attachments of an item.
+
+    Returns list of (attachment_itemID, resolved_path) tuples.
+    """
+    item_atts = attachments[attachments["parentItemID"] == item_id]
+    resolved = []
+    for _, att in item_atts.iterrows():
+        try:
+            pdf_path = resolve_pdf_path(
+                storage_dir, att["key"], att["path"], base_dir=base_dir
+            )
+            if pdf_path.exists():
+                resolved.append((att["itemID"], pdf_path))
+        except ValueError as e:
+            warnings.append(f"{title}: {e}")
+    return resolved
+
+
 def _export_item(
     item_row: pd.Series,
-    item_anns: pd.DataFrame,
-    pdf_path: Path | None,
+    all_anns: pd.DataFrame,
+    att_pdfs: list[tuple[int, Path]],
     output_dir: Path,
     warnings: list[str],
     console=None,
 ) -> bool:
-    """Export a single item (PDF + markdown). Returns True if exported."""
-    title = _str_or(item_row.get("title"), "untitled")
-    has_annotations = len(item_anns) > 0
-    has_pdf = pdf_path is not None
+    """Export a single item with per-attachment annotation baking.
 
-    if not has_pdf and not has_annotations:
+    Args:
+        item_row: Series with item metadata.
+        all_anns: DataFrame of annotations with parentItemID column
+            pointing to specific attachments.
+        att_pdfs: List of (attachment_itemID, pdf_path) tuples.
+        output_dir: Root output directory.
+        warnings: List to append warnings to.
+        console: Rich console for output.
+
+    Returns True if exported.
+    """
+    title = _str_or(item_row.get("title"), "untitled")
+    has_annotations = len(all_anns) > 0
+    has_pdfs = len(att_pdfs) > 0
+
+    if not has_pdfs and not has_annotations:
         warnings.append(f"No PDF or annotations: {title}")
         return False
 
@@ -443,47 +481,30 @@ def _export_item(
     item_dir = output_dir / dirname
     item_dir.mkdir(parents=True, exist_ok=True)
 
-    if has_pdf:
-        output_pdf = item_dir / "paper.pdf"
-        if has_annotations:
-            ann_warnings = bake_annotations(pdf_path, item_anns, output_pdf)
-            warnings.extend(ann_warnings)
-        else:
-            shutil.copy2(pdf_path, output_pdf)
+    if has_pdfs:
+        # First PDF with annotations is "paper.pdf", rest are numbered
+        pdf_names = iter(["paper.pdf"] + [f"paper-{i}.pdf" for i in range(2, 20)])
+        for att_id, pdf_path in att_pdfs:
+            output_name = next(pdf_names)
+            output_pdf = item_dir / output_name
+
+            # Get annotations for this specific attachment
+            att_anns = all_anns[all_anns["parentItemID"] == att_id]
+
+            if len(att_anns) > 0:
+                ann_warnings = bake_annotations(pdf_path, att_anns, output_pdf)
+                warnings.extend(ann_warnings)
+            else:
+                shutil.copy2(pdf_path, output_pdf)
 
     if has_annotations:
-        md_content = format_annotations_markdown(item_row, item_anns)
+        md_content = format_annotations_markdown(item_row, all_anns)
         (item_dir / "annotations.md").write_text(md_content, encoding="utf-8")
 
     if console:
         console.print(f"  Exported: {dirname}")
 
     return True
-
-
-def _resolve_item_pdf(
-    attachments: pd.DataFrame,
-    item_id: int,
-    storage_dir: Path,
-    base_dir: Path | None,
-    warnings: list[str],
-    title: str,
-) -> Path | None:
-    """Resolve the PDF path for a regular item via its attachments."""
-    item_atts = attachments[attachments["parentItemID"] == item_id]
-    if item_atts.empty:
-        return None
-
-    att = item_atts.iloc[0]
-    try:
-        pdf_path = resolve_pdf_path(
-            storage_dir, att["key"], att["path"], base_dir=base_dir
-        )
-        if pdf_path.exists():
-            return pdf_path
-    except ValueError as e:
-        warnings.append(f"{title}: {e}")
-    return None
 
 
 def export_reviews(
@@ -539,11 +560,11 @@ def export_reviews(
         title = _str_or(item.get("title"), "untitled")
         item_anns = annotations[annotations["paperItemID"] == item_id]
 
-        pdf_path = _resolve_item_pdf(
+        att_pdfs = _resolve_attachment_pdfs(
             attachments, item_id, storage_dir, base_dir, warnings, title
         )
 
-        if _export_item(item, item_anns, pdf_path, output_dir, warnings, console):
+        if _export_item(item, item_anns, att_pdfs, output_dir, warnings, console):
             exported += 1
         else:
             skipped += 1
@@ -556,13 +577,13 @@ def export_reviews(
         )
 
         # Resolve PDF path
-        pdf_path = None
+        att_pdfs = []
         try:
             pdf_path = resolve_pdf_path(
                 storage_dir, att["key"], att["path"], base_dir=base_dir
             )
-            if not pdf_path.exists():
-                pdf_path = None
+            if pdf_path.exists():
+                att_pdfs = [(att_id, pdf_path)]
         except ValueError as e:
             warnings.append(f"{title}: {e}")
 
@@ -582,7 +603,7 @@ def export_reviews(
             "year": float("nan"),
         })
 
-        if _export_item(item_row, att_anns, pdf_path, output_dir, warnings, console):
+        if _export_item(item_row, att_anns, att_pdfs, output_dir, warnings, console):
             exported += 1
         else:
             skipped += 1

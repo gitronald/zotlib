@@ -1,4 +1,4 @@
-"""Tests for the reviews module."""
+"""Tests for the export module."""
 
 import json
 from pathlib import Path
@@ -7,7 +7,7 @@ import fitz
 import pandas as pd
 import pytest
 
-from zotlib.reviews import (
+from zotlib.export import (
     ANNOTATION_TYPES,
     COLOR_LABELS,
     _strip_review_prefix,

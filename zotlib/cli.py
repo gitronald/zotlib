@@ -21,7 +21,7 @@ from zotlib.extractors import (
 from zotlib.backup import create_backup, default_backup_path
 from zotlib.covers import generate_covers, generate_thumbnails
 from zotlib.formatters.apa import format_cv_as_apa
-from zotlib.reviews import export_reviews
+from zotlib.export import export_reviews
 from zotlib.schema import ALL_SCHEMAS
 
 app = typer.Typer(
