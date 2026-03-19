@@ -31,91 +31,7 @@ app = typer.Typer(
 console = Console()
 
 
-@app.command("export-csv")
-def export_csv(
-    database: Annotated[
-        Optional[Path],
-        typer.Option("--database", "-d", help="Path to zotero.sqlite"),
-    ] = None,
-    output_dir: Annotated[
-        Path,
-        typer.Option("--output", "-o", help="Output directory"),
-    ] = Path("output/export-csv"),
-    collection: Annotated[
-        Optional[str],
-        typer.Option("--collection", "-c", help="Filter to collection name"),
-    ] = None,
-):
-    """Export bibliographic data from Zotero database as CSV.
-
-    Examples:
-        zotlib export-csv
-        zotlib export-csv -c publications
-        zotlib export-csv -d /path/to/zotero.sqlite -c rer
-    """
-    db_path = get_database_path(database)
-    console.print(f"Using database: {db_path}")
-
-    db = ZoteroDatabase(db_path)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    if collection:
-        items = extract_cv_items(db, collection)
-        csv_path = output_dir / f"{collection}.csv"
-        items.write_csv(csv_path)
-        console.print(f"Saved: {csv_path} ({len(items)} items)")
-    else:
-        items = extract_items(db)
-        creators = extract_creators(db)
-        collections = extract_collections(db)
-        libraries = extract_libraries(db)
-
-        for name, df in [
-            ("items", items),
-            ("creators", creators),
-            ("collections", collections),
-            ("libraries", libraries),
-        ]:
-            path = output_dir / f"{name}.csv"
-            df.write_csv(path)
-            console.print(f"Saved: {path} ({len(df)} rows)")
-
-
-@app.command("export-apa")
-def export_apa(
-    database: Annotated[
-        Optional[Path],
-        typer.Option("--database", "-d", help="Path to zotero.sqlite"),
-    ] = None,
-    output_dir: Annotated[
-        Path,
-        typer.Option("--output", "-o", help="Output directory"),
-    ] = Path("output/export-apa"),
-    collection: Annotated[
-        str,
-        typer.Option("--collection", "-c", help="Collection name"),
-    ] = ...,
-    group_by: Annotated[
-        str,
-        typer.Option("--group-by", "-g", help="Column to group references by"),
-    ] = "typeName",
-):
-    """Format collection items as APA references.
-
-    Examples:
-        zotlib export-apa -c publications
-        zotlib export-apa -c publications -g year
-    """
-    db_path = get_database_path(database)
-    console.print(f"Using database: {db_path}")
-
-    db = ZoteroDatabase(db_path)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    items = extract_cv_items(db, collection)
-    apa_path = output_dir / f"{collection}.md"
-    format_cv_as_apa(items, apa_path, group_by=group_by)
-    console.print(f"Saved: {apa_path} ({len(items)} items)")
+# --- Explore ---
 
 
 @app.command()
@@ -147,23 +63,6 @@ def collections(
         )
 
     console.print(table)
-
-
-@app.command()
-def tables(
-    database: Annotated[
-        Optional[Path],
-        typer.Option("--database", "-d", help="Path to zotero.sqlite"),
-    ] = None,
-):
-    """List all tables in the Zotero database (for debugging)."""
-    db_path = get_database_path(database)
-    db = ZoteroDatabase(db_path)
-
-    table_names = db.get_table_names()
-    console.print(f"[bold]Tables in {db_path.name}:[/bold]")
-    for name in sorted(table_names):
-        console.print(f"  - {name}")
 
 
 @app.command()
@@ -209,6 +108,112 @@ def schema(
             cols = ", ".join(s.columns.keys())
             table.add_row(s.name, s.description, cols)
         wide.print(table)
+
+
+@app.command()
+def tables(
+    database: Annotated[
+        Optional[Path],
+        typer.Option("--database", "-d", help="Path to zotero.sqlite"),
+    ] = None,
+):
+    """List all tables in the Zotero database (for debugging)."""
+    db_path = get_database_path(database)
+    db = ZoteroDatabase(db_path)
+
+    table_names = db.get_table_names()
+    console.print(f"[bold]Tables in {db_path.name}:[/bold]")
+    for name in sorted(table_names):
+        console.print(f"  - {name}")
+
+
+# --- Export ---
+
+
+@app.command("export-annotations")
+def export_annotations(
+    database: Annotated[
+        Optional[Path],
+        typer.Option("--database", "-d", help="Path to zotero.sqlite"),
+    ] = None,
+    output_dir: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Output directory"),
+    ] = Path("output/export-annotations"),
+    collection: Annotated[
+        str,
+        typer.Option("--collection", "-c", help="Collection name"),
+    ] = ...,
+    base_dir: Annotated[
+        Optional[Path],
+        typer.Option("--pdfs-dir", "-p", help="Directory for linked PDF attachments"),
+    ] = None,
+):
+    """Export collection with baked annotations and markdown notes.
+
+    For each item in the collection, exports a subdirectory containing
+    the PDF (with annotations baked in) and a markdown file with YAML
+    frontmatter and annotation text.
+
+    Examples:
+        zotlib export-annotations -c mycollection
+        zotlib export-annotations -c mycollection -p "/mnt/i/My Drive/zotero-pdfs/"
+        zotlib export-annotations -c mycollection -o custom/output/path
+    """
+    db_path = get_database_path(database)
+    console.print(f"Using database: {db_path}")
+
+    db = ZoteroDatabase(db_path)
+    collection_dir = output_dir / collection
+
+    exported, skipped, warnings = export_collection(
+        db, collection, collection_dir, base_dir=base_dir, console=console
+    )
+
+    console.print(f"\nExported {exported} items to {collection_dir}")
+    if skipped:
+        console.print(f"[yellow]Skipped {skipped} items (no PDF or annotations)[/yellow]")
+    if warnings:
+        console.print(f"[yellow]Warnings:[/yellow]")
+        for w in warnings:
+            console.print(f"  - {w}")
+
+
+@app.command("export-apa")
+def export_apa(
+    database: Annotated[
+        Optional[Path],
+        typer.Option("--database", "-d", help="Path to zotero.sqlite"),
+    ] = None,
+    output_dir: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Output directory"),
+    ] = Path("output/export-apa"),
+    collection: Annotated[
+        str,
+        typer.Option("--collection", "-c", help="Collection name"),
+    ] = ...,
+    group_by: Annotated[
+        str,
+        typer.Option("--group-by", "-g", help="Column to group references by"),
+    ] = "typeName",
+):
+    """Format collection items as APA references.
+
+    Examples:
+        zotlib export-apa -c publications
+        zotlib export-apa -c publications -g year
+    """
+    db_path = get_database_path(database)
+    console.print(f"Using database: {db_path}")
+
+    db = ZoteroDatabase(db_path)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    items = extract_cv_items(db, collection)
+    apa_path = output_dir / f"{collection}.md"
+    format_cv_as_apa(items, apa_path, group_by=group_by)
+    console.print(f"Saved: {apa_path} ({len(items)} items)")
 
 
 @app.command("export-covers")
@@ -288,6 +293,59 @@ def export_covers(
             console.print(f"  - {item}")
 
 
+@app.command("export-csv")
+def export_csv(
+    database: Annotated[
+        Optional[Path],
+        typer.Option("--database", "-d", help="Path to zotero.sqlite"),
+    ] = None,
+    output_dir: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Output directory"),
+    ] = Path("output/export-csv"),
+    collection: Annotated[
+        Optional[str],
+        typer.Option("--collection", "-c", help="Filter to collection name"),
+    ] = None,
+):
+    """Export bibliographic data from Zotero database as CSV.
+
+    Examples:
+        zotlib export-csv
+        zotlib export-csv -c publications
+        zotlib export-csv -d /path/to/zotero.sqlite -c rer
+    """
+    db_path = get_database_path(database)
+    console.print(f"Using database: {db_path}")
+
+    db = ZoteroDatabase(db_path)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    if collection:
+        items = extract_cv_items(db, collection)
+        csv_path = output_dir / f"{collection}.csv"
+        items.write_csv(csv_path)
+        console.print(f"Saved: {csv_path} ({len(items)} items)")
+    else:
+        items = extract_items(db)
+        creators = extract_creators(db)
+        collections = extract_collections(db)
+        libraries = extract_libraries(db)
+
+        for name, df in [
+            ("items", items),
+            ("creators", creators),
+            ("collections", collections),
+            ("libraries", libraries),
+        ]:
+            path = output_dir / f"{name}.csv"
+            df.write_csv(path)
+            console.print(f"Saved: {path} ({len(df)} rows)")
+
+
+# --- Manage ---
+
+
 @app.command()
 def backup(
     database: Annotated[
@@ -314,55 +372,6 @@ def backup(
 
     output.parent.mkdir(parents=True, exist_ok=True)
     create_backup(source_dir, output, console)
-
-
-@app.command("export-annotations")
-def export_annotations(
-    database: Annotated[
-        Optional[Path],
-        typer.Option("--database", "-d", help="Path to zotero.sqlite"),
-    ] = None,
-    output_dir: Annotated[
-        Path,
-        typer.Option("--output", "-o", help="Output directory"),
-    ] = Path("output/export-annotations"),
-    collection: Annotated[
-        str,
-        typer.Option("--collection", "-c", help="Collection name"),
-    ] = ...,
-    base_dir: Annotated[
-        Optional[Path],
-        typer.Option("--pdfs-dir", "-p", help="Directory for linked PDF attachments"),
-    ] = None,
-):
-    """Export collection with baked annotations and markdown notes.
-
-    For each item in the collection, exports a subdirectory containing
-    the PDF (with annotations baked in) and a markdown file with YAML
-    frontmatter and annotation text.
-
-    Examples:
-        zotlib export-annotations -c mycollection
-        zotlib export-annotations -c mycollection -p "/mnt/i/My Drive/zotero-pdfs/"
-        zotlib export-annotations -c mycollection -o custom/output/path
-    """
-    db_path = get_database_path(database)
-    console.print(f"Using database: {db_path}")
-
-    db = ZoteroDatabase(db_path)
-    collection_dir = output_dir / collection
-
-    exported, skipped, warnings = export_collection(
-        db, collection, collection_dir, base_dir=base_dir, console=console
-    )
-
-    console.print(f"\nExported {exported} items to {collection_dir}")
-    if skipped:
-        console.print(f"[yellow]Skipped {skipped} items (no PDF or annotations)[/yellow]")
-    if warnings:
-        console.print(f"[yellow]Warnings:[/yellow]")
-        for w in warnings:
-            console.print(f"  - {w}")
 
 
 if __name__ == "__main__":
