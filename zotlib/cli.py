@@ -160,27 +160,35 @@ def schema(
         zotlib schema items
         zotlib schema itemAnnotations
     """
+    wide = Console(width=200, force_terminal=True)
     if table_name:
         # Show specific table
         for s in ALL_SCHEMAS:
             if s.name == table_name:
-                console.print(f"[bold]{s.name}[/bold]: {s.description}\n")
                 table = Table(show_header=True)
-                table.add_column("Column", style="cyan")
+                table.add_column("Table", style="cyan bold")
+                table.add_column("Column", style="green")
+                table.add_column("Type")
                 table.add_column("Description")
-                for col, col_def in s.columns.items():
-                    table.add_row(col, col_def.description)
-                console.print(table)
+                for i, (col, col_def) in enumerate(s.columns.items()):
+                    table.add_row(
+                        s.name if i == 0 else "",
+                        col, col_def.type, col_def.description,
+                    )
+                wide.print(table)
                 return
-        console.print(f"[red]Unknown table: {table_name}[/red]")
-        console.print(f"Available: {', '.join(s.name for s in ALL_SCHEMAS)}")
+        wide.print(f"[red]Unknown table: {table_name}[/red]")
+        wide.print(f"Available: {', '.join(s.name for s in ALL_SCHEMAS)}")
     else:
         # Show all tables
-        console.print("[bold]Zotero Database Schema (tables used by zotlib)[/bold]\n")
+        table = Table(title="Zotero Database Schema")
+        table.add_column("Table", style="cyan", no_wrap=True)
+        table.add_column("Description", no_wrap=True)
+        table.add_column("Columns", no_wrap=True)
         for s in ALL_SCHEMAS:
             cols = ", ".join(s.columns.keys())
-            console.print(f"[cyan]{s.name}[/cyan]: {s.description}")
-            console.print(f"  Columns: {cols}\n")
+            table.add_row(s.name, s.description, cols)
+        wide.print(table)
 
 
 @app.command()
