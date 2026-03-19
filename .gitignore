@@ -14,11 +14,15 @@ build/
 .idea/
 .claude
 
+# Testing
+.pytest_cache/
+
 # Data/output
 data
 output/
 *.csv
 *.sqlite
+zotlib.toml
 
 # Archive
 .archive/
