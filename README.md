@@ -46,55 +46,65 @@ The database path can be configured via:
 
 ## CLI Commands
 
-### Extract and format
+### Export data
 
 ```bash
-# Extract all data with auto-discovered database
-zotlib extract
+# Export all tables as CSV
+zotlib export-csv
 
-# Extract CV items from a specific collection as APA
-zotlib extract -c rer -f apa
+# Export a collection as CSV
+zotlib export-csv -c publications
 
+# Format a collection as APA references
+zotlib export-apa -c publications
+
+# Generate cover images and thumbnails
+zotlib export-covers -c publications
+zotlib export-covers -c publications -p "/path/to/linked-pdfs/"
+
+# Export annotated PDFs and markdown notes
+zotlib export-annotations -c mycollection
+zotlib export-annotations -c mycollection -p "/path/to/linked-pdfs/"
+```
+
+### Explore and manage
+
+```bash
 # List available collections
 zotlib collections
 
+# Show database schema
+zotlib schema
+zotlib schema items
+
 # List database tables
 zotlib tables
-
-# Show schema for tables used by zotlib
-zotlib schema
-zotlib schema itemAnnotations
-
-# Generate cover images from first page of PDFs
-zotlib covers -c publications -b "/path/to/linked-pdfs/"
-
-# Resize cover images to thumbnails
-zotlib thumbnails output/publications
-zotlib thumbnails output/publications -w 200
 
 # Back up the Zotero data directory
 zotlib backup
 ```
 
-### Export annotated PDFs
+### Output structure
 
-```bash
-# Export a collection with annotated PDFs and markdown notes
-zotlib export -c mycollection
-
-# Export with linked attachment resolution
-zotlib export -c mycollection -b "/path/to/linked-pdfs/"
-
-# Custom output directory
-zotlib export -c mycollection -o custom/output/path
+```
+output/
+├── export-csv/                     # Bibliographic metadata
+│   └── publications.csv
+├── export-apa/                     # APA-formatted references
+│   └── publications.md
+├── export-covers/                  # PDF cover images
+│   └── publications/
+│       ├── fullsize/
+│       └── thumbnails/
+└── export-annotations/             # Annotated PDFs + notes
+    └── mycollection/
+        └── author-year-title/
+            ├── paper.pdf
+            └── annotations.md
 ```
 
-Each item in the collection is exported as a subdirectory containing:
-- `paper.pdf` — PDF with annotations baked in via PyMuPDF
-- `paper-2.pdf`, etc. — additional PDFs (e.g., supplementary materials)
-- `annotations.md` — markdown with YAML frontmatter and page-grouped annotations
+### Export annotations features
 
-Features:
 - Multi-attachment support: each PDF gets only its own annotations
 - Standalone attachment support: PDFs added directly to a collection
 - Linked attachment resolution via `--pdfs-dir`
