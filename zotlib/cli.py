@@ -207,7 +207,7 @@ def covers(
     ] = ...,
     base_dir: Annotated[
         Optional[Path],
-        typer.Option("--pdfs-dir", "-a", help="Directory for linked PDF attachments"),
+        typer.Option("--pdfs-dir", "-p", help="Directory for linked PDF attachments"),
     ] = None,
     dpi: Annotated[
         int,
@@ -324,7 +324,7 @@ def export(
     ] = ...,
     base_dir: Annotated[
         Optional[Path],
-        typer.Option("--pdfs-dir", "-a", help="Directory for linked PDF attachments"),
+        typer.Option("--pdfs-dir", "-p", help="Directory for linked PDF attachments"),
     ] = None,
 ):
     """Export collection with baked annotations and markdown notes.
