@@ -13,7 +13,7 @@ zotlib/
 │   ├── extractors.py            # Data extraction functions
 │   ├── export.py                # Collection export (annotations + PDFs)
 │   ├── backup.py                # Zotero directory backup
-│   ├── schema.py                # Zotero database schema definitions
+│   ├── tables.py                # Zotero database table definitions
 │   ├── covers.py                # PDF cover generation
 │   └── formatters/apa.py        # APA citation formatter
 ├── zotero-js/                   # Zotero JavaScript scripts
@@ -73,9 +73,9 @@ zotlib export-annotations -c mycollection -p "/path/to/linked-pdfs/"
 # List available collections
 zotlib collections
 
-# Show database schema
-zotlib schema
-zotlib schema items
+# Show database tables
+zotlib show-tables
+zotlib show-tables items
 
 # List database tables
 zotlib tables
