@@ -9,7 +9,7 @@ from rich.table import Table
 
 import polars as pl
 
-from zotlib.config import get_database_path
+from zotlib.config import get_database_path, discover_pdfs_dir
 from zotlib.database import ZoteroDatabase
 from zotlib.extractors import (
     extract_items,
@@ -164,6 +164,10 @@ def export_annotations(
     console.print(f"Using database: {db_path}")
 
     db = ZoteroDatabase(db_path)
+    if base_dir is None:
+        base_dir = discover_pdfs_dir()
+        if base_dir:
+            console.print(f"Using linked PDFs directory: {base_dir}")
     collection_dir = output_dir / collection
 
     exported, skipped, warnings = export_collection(
@@ -258,6 +262,10 @@ def export_covers(
     console.print(f"Using database: {db_path}")
 
     db = ZoteroDatabase(db_path)
+    if base_dir is None:
+        base_dir = discover_pdfs_dir()
+        if base_dir:
+            console.print(f"Using linked PDFs directory: {base_dir}")
     fullsize_dir = output_dir / collection / "fullsize"
 
     cover_paths, skipped = generate_covers(
