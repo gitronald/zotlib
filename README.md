@@ -71,14 +71,11 @@ zotlib export-annotations -c mycollection -p "/path/to/linked-pdfs/"
 
 ```bash
 # List available collections
-zotlib collections
+zotlib show-collections
 
 # Show database tables
 zotlib show-tables
 zotlib show-tables items
-
-# List database tables
-zotlib tables
 
 # Back up the Zotero data directory
 zotlib backup

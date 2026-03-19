@@ -84,7 +84,7 @@ def generate_thumbnails(
         img = Image.open(png_path)
         scale = width / img.width
         height = int(img.height * scale)
-        thumb = img.resize((width, height), Image.LANCZOS)
+        thumb = img.resize((width, height), Image.Resampling.LANCZOS)
 
         thumb_name = png_path.stem.replace("-cover", "-thumb") + ".png"
         thumb.save(output_dir / thumb_name)
