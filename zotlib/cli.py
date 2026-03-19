@@ -31,8 +31,8 @@ app = typer.Typer(
 console = Console()
 
 
-@app.command()
-def extract(
+@app.command("export-csv")
+def export_csv(
     database: Annotated[
         Optional[Path],
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
@@ -40,22 +40,18 @@ def extract(
     output_dir: Annotated[
         Path,
         typer.Option("--output", "-o", help="Output directory"),
-    ] = Path("output"),
+    ] = Path("output/export-csv"),
     collection: Annotated[
         Optional[str],
         typer.Option("--collection", "-c", help="Filter to collection name"),
     ] = None,
-    format: Annotated[
-        str,
-        typer.Option("--format", "-f", help="Output format: csv, apa, both"),
-    ] = "both",
 ):
-    """Extract bibliographic data from Zotero database.
+    """Export bibliographic data from Zotero database as CSV.
 
     Examples:
-        zotlib extract
-        zotlib extract -d /path/to/zotero.sqlite -c rer
-        zotlib extract --format apa --collection mypapers
+        zotlib export-csv
+        zotlib export-csv -c publications
+        zotlib export-csv -d /path/to/zotero.sqlite -c rer
     """
     db_path = get_database_path(database)
     console.print(f"Using database: {db_path}")
@@ -64,28 +60,15 @@ def extract(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if collection:
-        # Extract CV items from specific collection
         items = extract_cv_items(db, collection)
-        console.print(f"Extracted {len(items)} items from '{collection}' collection")
-
-        if format in ("csv", "both"):
-            csv_path = output_dir / f"{collection}.csv"
-            items.write_csv(csv_path)
-            console.print(f"Saved: {csv_path}")
-
-        if format in ("apa", "both"):
-            apa_path = output_dir / f"{collection}-apa.md"
-            format_cv_as_apa(items, apa_path)
-            console.print(f"Saved: {apa_path}")
+        csv_path = output_dir / f"{collection}.csv"
+        items.write_csv(csv_path)
+        console.print(f"Saved: {csv_path} ({len(items)} items)")
     else:
-        # Extract all tables
         items = extract_items(db)
         creators = extract_creators(db)
         collections = extract_collections(db)
         libraries = extract_libraries(db)
-
-        data_dir = output_dir / "data"
-        data_dir.mkdir(parents=True, exist_ok=True)
 
         for name, df in [
             ("items", items),
@@ -93,9 +76,46 @@ def extract(
             ("collections", collections),
             ("libraries", libraries),
         ]:
-            path = data_dir / f"{name}.csv"
+            path = output_dir / f"{name}.csv"
             df.write_csv(path)
             console.print(f"Saved: {path} ({len(df)} rows)")
+
+
+@app.command("export-apa")
+def export_apa(
+    database: Annotated[
+        Optional[Path],
+        typer.Option("--database", "-d", help="Path to zotero.sqlite"),
+    ] = None,
+    output_dir: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Output directory"),
+    ] = Path("output/export-apa"),
+    collection: Annotated[
+        str,
+        typer.Option("--collection", "-c", help="Collection name"),
+    ] = ...,
+    group_by: Annotated[
+        str,
+        typer.Option("--group-by", "-g", help="Column to group references by"),
+    ] = "typeName",
+):
+    """Format collection items as APA references.
+
+    Examples:
+        zotlib export-apa -c publications
+        zotlib export-apa -c publications -g year
+    """
+    db_path = get_database_path(database)
+    console.print(f"Using database: {db_path}")
+
+    db = ZoteroDatabase(db_path)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    items = extract_cv_items(db, collection)
+    apa_path = output_dir / f"{collection}.md"
+    format_cv_as_apa(items, apa_path, group_by=group_by)
+    console.print(f"Saved: {apa_path} ({len(items)} items)")
 
 
 @app.command()
@@ -191,8 +211,8 @@ def schema(
         wide.print(table)
 
 
-@app.command()
-def covers(
+@app.command("export-covers")
+def export_covers(
     database: Annotated[
         Optional[Path],
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
@@ -200,7 +220,7 @@ def covers(
     output_dir: Annotated[
         Path,
         typer.Option("--output", "-o", help="Output directory"),
-    ] = Path("output"),
+    ] = Path("output/export-covers"),
     collection: Annotated[
         str,
         typer.Option("--collection", "-c", help="Collection name"),
@@ -213,26 +233,43 @@ def covers(
         int,
         typer.Option("--dpi", help="Image resolution in DPI"),
     ] = 300,
+    thumbnail_width: Annotated[
+        int,
+        typer.Option("--thumb-width", "-w", help="Thumbnail width in pixels"),
+    ] = 400,
+    no_thumbnails: Annotated[
+        bool,
+        typer.Option("--no-thumbnails", help="Skip thumbnail generation"),
+    ] = False,
 ):
-    """Generate first-page cover images for PDFs in a collection.
+    """Generate first-page cover images and thumbnails for PDFs in a collection.
 
     Examples:
-        zotlib covers -c publications -b "/mnt/i/My Drive/zotero-pdfs/"
-        zotlib covers -c mypapers -o covers/ --dpi 150
+        zotlib export-covers -c publications
+        zotlib export-covers -c publications -p "/mnt/i/My Drive/zotero-pdfs/"
+        zotlib export-covers -c publications --no-thumbnails
     """
     db_path = get_database_path(database)
     console.print(f"Using database: {db_path}")
 
     db = ZoteroDatabase(db_path)
-    covers_dir = output_dir / collection
+    fullsize_dir = output_dir / collection / "fullsize"
 
     cover_paths, skipped = generate_covers(
-        db, collection, covers_dir, dpi=dpi, base_dir=base_dir
+        db, collection, fullsize_dir, dpi=dpi, base_dir=base_dir
     )
-    console.print(f"Generated {len(cover_paths)} cover images in {covers_dir}")
+    console.print(f"Generated {len(cover_paths)} cover images in {fullsize_dir}")
+
+    # Generate thumbnails
+    if not no_thumbnails:
+        thumbs_dir = output_dir / collection / "thumbnails"
+        count = generate_thumbnails(fullsize_dir, thumbs_dir, width=thumbnail_width)
+        console.print(f"Generated {count} thumbnails ({thumbnail_width}px wide) in {thumbs_dir}")
 
     # Add cover paths to collection CSV
-    csv_path = output_dir / f"{collection}.csv"
+    csv_dir = Path("output/export-csv")
+    csv_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = csv_dir / f"{collection}.csv"
     if csv_path.exists():
         items_df = pl.read_csv(csv_path)
     else:
@@ -249,35 +286,6 @@ def covers(
         console.print(f"[yellow]Skipped {len(skipped)} missing PDFs:[/yellow]")
         for item in skipped:
             console.print(f"  - {item}")
-
-
-@app.command()
-def thumbnails(
-    input_dir: Annotated[
-        Path,
-        typer.Argument(help="Directory containing cover images"),
-    ],
-    output_dir: Annotated[
-        Optional[Path],
-        typer.Option("--output", "-o", help="Output directory (default: {input_dir}/thumbs)"),
-    ] = None,
-    width: Annotated[
-        int,
-        typer.Option("--width", "-w", help="Target width in pixels"),
-    ] = 400,
-):
-    """Resize cover images to thumbnails.
-
-    Examples:
-        zotlib thumbnails output/publications
-        zotlib thumbnails output/publications -w 200
-        zotlib thumbnails output/publications -o output/thumbs
-    """
-    if output_dir is None:
-        output_dir = input_dir / "thumbs"
-
-    count = generate_thumbnails(input_dir, output_dir, width=width)
-    console.print(f"Generated {count} thumbnails ({width}px wide) in {output_dir}")
 
 
 @app.command()
@@ -308,8 +316,8 @@ def backup(
     create_backup(source_dir, output, console)
 
 
-@app.command()
-def export(
+@app.command("export-annotations")
+def export_annotations(
     database: Annotated[
         Optional[Path],
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
@@ -317,7 +325,7 @@ def export(
     output_dir: Annotated[
         Path,
         typer.Option("--output", "-o", help="Output directory"),
-    ] = Path("output/export"),
+    ] = Path("output/export-annotations"),
     collection: Annotated[
         str,
         typer.Option("--collection", "-c", help="Collection name"),
@@ -334,20 +342,21 @@ def export(
     frontmatter and annotation text.
 
     Examples:
-        zotlib export -c mycollection
-        zotlib export -c mycollection -b "/mnt/i/My Drive/zotero-pdfs/"
-        zotlib export -c mycollection -o custom/output/path
+        zotlib export-annotations -c mycollection
+        zotlib export-annotations -c mycollection -p "/mnt/i/My Drive/zotero-pdfs/"
+        zotlib export-annotations -c mycollection -o custom/output/path
     """
     db_path = get_database_path(database)
     console.print(f"Using database: {db_path}")
 
     db = ZoteroDatabase(db_path)
+    collection_dir = output_dir / collection
 
     exported, skipped, warnings = export_collection(
-        db, collection, output_dir, base_dir=base_dir, console=console
+        db, collection, collection_dir, base_dir=base_dir, console=console
     )
 
-    console.print(f"\nExported {exported} items to {output_dir}")
+    console.print(f"\nExported {exported} items to {collection_dir}")
     if skipped:
         console.print(f"[yellow]Skipped {skipped} items (no PDF or annotations)[/yellow]")
     if warnings:

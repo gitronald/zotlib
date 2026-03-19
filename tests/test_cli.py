@@ -31,8 +31,23 @@ def test_schema_unknown_table():
     assert "Unknown table" in result.output
 
 
-def test_extract_help():
-    result = runner.invoke(app, ["extract", "--help"])
+def test_export_csv_help():
+    result = runner.invoke(app, ["export-csv", "--help"])
+    assert result.exit_code == 0
+
+
+def test_export_apa_help():
+    result = runner.invoke(app, ["export-apa", "--help"])
+    assert result.exit_code == 0
+
+
+def test_export_covers_help():
+    result = runner.invoke(app, ["export-covers", "--help"])
+    assert result.exit_code == 0
+
+
+def test_export_annotations_help():
+    result = runner.invoke(app, ["export-annotations", "--help"])
     assert result.exit_code == 0
 
 
@@ -41,23 +56,8 @@ def test_collections_help():
     assert result.exit_code == 0
 
 
-def test_covers_help():
-    result = runner.invoke(app, ["covers", "--help"])
-    assert result.exit_code == 0
-
-
-def test_thumbnails_help():
-    result = runner.invoke(app, ["thumbnails", "--help"])
-    assert result.exit_code == 0
-
-
 def test_backup_help():
     result = runner.invoke(app, ["backup", "--help"])
-    assert result.exit_code == 0
-
-
-def test_export_help():
-    result = runner.invoke(app, ["export", "--help"])
     assert result.exit_code == 0
 
 
