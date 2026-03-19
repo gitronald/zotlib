@@ -153,7 +153,13 @@ def schema(
         typer.Argument(help="Table name to show schema for (optional)"),
     ] = None,
 ):
-    """Show Zotero database schema for tables used by zotlib."""
+    """Show Zotero database schema for tables used by zotlib.
+
+    Examples:
+        zotlib schema
+        zotlib schema items
+        zotlib schema itemAnnotations
+    """
     if table_name:
         # Show specific table
         for s in ALL_SCHEMAS:
