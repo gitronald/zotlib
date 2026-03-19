@@ -3,7 +3,7 @@
 
 from pathlib import Path
 
-from zotlib.schema import ALL_SCHEMAS
+from zotlib.tables import ALL_SCHEMAS
 
 
 def generate_schema_markdown() -> str:

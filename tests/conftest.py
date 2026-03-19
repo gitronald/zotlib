@@ -1,13 +1,15 @@
 """Pytest fixtures for zotlib tests."""
 
+from datetime import date
+
+import polars as pl
 import pytest
-import pandas as pd
 
 
 @pytest.fixture
 def sample_cv_row():
     """Sample CV item row for testing APA formatting."""
-    return pd.Series({
+    return {
         "itemID": 1,
         "typeName": "journalArticle",
         "authors": "John Smith, Jane Doe",
@@ -19,16 +21,16 @@ def sample_cv_row():
         "pages": "100-115",
         "DOI": "10.1234/example.2023",
         "url": None,
-        "date": pd.Timestamp("2023-06-15"),
-    })
+        "date": date(2023, 6, 15),
+    }
 
 
 @pytest.fixture
 def sample_cv_items(sample_cv_row):
     """Sample CV items DataFrame for testing."""
-    rows = [
+    return pl.DataFrame([
         sample_cv_row,
-        pd.Series({
+        {
             "itemID": 2,
             "typeName": "conferencePaper",
             "authors": "Alice Johnson",
@@ -40,7 +42,6 @@ def sample_cv_items(sample_cv_row):
             "pages": "50-55",
             "DOI": None,
             "url": "https://example.com/paper",
-            "date": pd.Timestamp("2022-03-10"),
-        }),
-    ]
-    return pd.DataFrame(rows)
+            "date": date(2022, 3, 10),
+        },
+    ])

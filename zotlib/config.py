@@ -32,6 +32,49 @@ def discover_zotero_database() -> Path | None:
     return None
 
 
+def _windows_to_wsl_path(win_path: str) -> Path:
+    """Convert a Windows path like 'I:\\My Drive\\zotero-pdfs' to WSL '/mnt/i/My Drive/zotero-pdfs'."""
+    from pathlib import PureWindowsPath
+    p = PureWindowsPath(win_path)
+    drive = p.drive.rstrip(":").lower()
+    return Path(f"/mnt/{drive}") / p.relative_to(p.anchor)
+
+
+def discover_pdfs_dir(db_path: Path | None = None) -> Path | None:
+    """Discover the linked attachments directory from Zotero preferences.
+
+    Reads baseAttachmentPath from prefs.js in the Zotero profile directory.
+    """
+    user = os.environ.get("USER", "")
+
+    profile_dirs = [
+        # WSL
+        Path(f"/mnt/c/Users/{user}/AppData/Roaming/Zotero/Zotero/Profiles"),
+        # Linux
+        Path.home() / ".zotero" / "zotero" / "Profiles",
+        # macOS
+        Path.home() / "Library" / "Application Support" / "Zotero" / "Profiles",
+    ]
+
+    for profile_dir in profile_dirs:
+        if not profile_dir.exists():
+            continue
+        for prefs_file in profile_dir.glob("*/prefs.js"):
+            for line in prefs_file.read_text(errors="ignore").splitlines():
+                if "extensions.zotero.baseAttachmentPath" in line and "better-bibtex" not in line:
+                    # Extract value from: user_pref("...", "value");
+                    value = line.split('"')[-2]
+                    # Convert Windows path if needed
+                    if "\\" in value or (len(value) > 1 and value[1] == ":"):
+                        path = _windows_to_wsl_path(value)
+                    else:
+                        path = Path(value)
+                    if path.exists():
+                        return path
+
+    return None
+
+
 def get_database_path(explicit_path: Path | str | None = None) -> Path:
     """Get the Zotero database path.
 

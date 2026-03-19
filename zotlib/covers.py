@@ -4,6 +4,7 @@ import re
 from pathlib import Path, PureWindowsPath
 
 import fitz
+import polars as pl
 
 from zotlib.database import ZoteroDatabase
 from zotlib.extractors import extract_attachments, extract_collections, extract_items
@@ -29,8 +30,8 @@ def resolve_pdf_path(
     if path_field.startswith("attachments:"):
         if base_dir is None:
             raise ValueError(
-                "Linked attachment found but no --base-dir provided. "
-                "Set the base directory for linked attachments."
+                "Linked attachment found but no --pdfs-dir provided. "
+                "Set the directory for linked PDF attachments."
             )
         relative = path_field.removeprefix("attachments:")
         return base_dir / relative
@@ -83,7 +84,7 @@ def generate_thumbnails(
         img = Image.open(png_path)
         scale = width / img.width
         height = int(img.height * scale)
-        thumb = img.resize((width, height), Image.LANCZOS)
+        thumb = img.resize((width, height), Image.Resampling.LANCZOS)
 
         thumb_name = png_path.stem.replace("-cover", "-thumb") + ".png"
         thumb.save(output_dir / thumb_name)
@@ -109,29 +110,30 @@ def generate_covers(
 
     # Get items in the collection
     collections = extract_collections(db)
-    collection_items = collections.query(
-        f"collectionName == '{collection_name}'"
-    )
-    if collection_items.empty:
+    collection_items = collections.filter(pl.col("collectionName") == collection_name)
+    if len(collection_items) == 0:
         raise ValueError(f"Collection not found: {collection_name}")
 
-    item_ids = set(collection_items["itemID"])
+    item_ids = set(collection_items["itemID"].to_list())
 
     # Get all items for titles
     items = extract_items(db)
-    items_in_collection = items[items["itemID"].isin(item_ids)]
-    title_map = dict(zip(items_in_collection["itemID"], items_in_collection["title"]))
+    items_in_collection = items.filter(pl.col("itemID").is_in(list(item_ids)))
+    title_map = dict(zip(
+        items_in_collection["itemID"].to_list(),
+        items_in_collection["title"].to_list(),
+    ))
 
     # Get PDF attachments
     attachments = extract_attachments(db)
-    attachments = attachments[attachments["parentItemID"].isin(item_ids)]
+    attachments = attachments.filter(pl.col("parentItemID").is_in(list(item_ids)))
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
     cover_paths: dict[int, Path] = {}
     skipped = []
 
-    for _, row in attachments.iterrows():
+    for row in attachments.iter_rows(named=True):
         parent_id = row["parentItemID"]
         title = title_map.get(parent_id, f"item_{parent_id}")
 

@@ -18,7 +18,7 @@ def test_format_apa_reference_journal(sample_cv_row):
 
 def test_format_apa_reference_conference(sample_cv_items):
     """Test APA formatting for conference paper."""
-    conf_row = sample_cv_items.iloc[1]
+    conf_row = sample_cv_items.row(1, named=True)
     result = format_apa_reference(conf_row)
 
     assert "Alice Johnson" in result
