@@ -1,5 +1,6 @@
 # TODO
 
+- [ ] Restructure CLI commands with export-* naming ([plan](.claude/plans/009-restructure-cli-commands.md))
 - [x] Polish CLI schema command and standardize output dirs ([plan](.claude/plans/008-cli-polish.md))
 - [x] Convert pandas to polars ([plan](.claude/plans/007-pandas-to-polars.md))
 - [x] Export with `--base-dir` for linked attachments ([plan](.claude/plans/003-export-reviews.md))
