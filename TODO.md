@@ -1,5 +1,6 @@
 # TODO
 
+- [ ] Add descriptions and columns for remaining tables in `show-tables --all` (no plan)
 - [ ] Add `zotlib init` command with `zotlib.toml` config ([plan](.claude/plans/010-init-command.md))
 - [ ] Restructure CLI commands with export-* naming ([plan](.claude/plans/009-restructure-cli-commands.md))
 - [x] Polish CLI schema command and standardize output dirs ([plan](.claude/plans/008-cli-polish.md))
