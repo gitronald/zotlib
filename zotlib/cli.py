@@ -303,7 +303,7 @@ def export(
     output_dir: Annotated[
         Path,
         typer.Option("--output", "-o", help="Output directory"),
-    ] = Path("outputs/export"),
+    ] = Path("output/export"),
     collection: Annotated[
         str,
         typer.Option("--collection", "-c", help="Collection name"),
