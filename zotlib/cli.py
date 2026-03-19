@@ -157,23 +157,23 @@ def schema(
     if table_name:
         # Show specific table
         for s in ALL_SCHEMAS:
-            if s["table"] == table_name:
-                console.print(f"[bold]{s['table']}[/bold]: {s['description']}\n")
+            if s.name == table_name:
+                console.print(f"[bold]{s.name}[/bold]: {s.description}\n")
                 table = Table(show_header=True)
                 table.add_column("Column", style="cyan")
                 table.add_column("Description")
-                for col, desc in s["columns"].items():
-                    table.add_row(col, desc)
+                for col, col_def in s.columns.items():
+                    table.add_row(col, col_def.description)
                 console.print(table)
                 return
         console.print(f"[red]Unknown table: {table_name}[/red]")
-        console.print(f"Available: {', '.join(s['table'] for s in ALL_SCHEMAS)}")
+        console.print(f"Available: {', '.join(s.name for s in ALL_SCHEMAS)}")
     else:
         # Show all tables
         console.print("[bold]Zotero Database Schema (tables used by zotlib)[/bold]\n")
         for s in ALL_SCHEMAS:
-            cols = ", ".join(s["columns"].keys())
-            console.print(f"[cyan]{s['table']}[/cyan]: {s['description']}")
+            cols = ", ".join(s.columns.keys())
+            console.print(f"[cyan]{s.name}[/cyan]: {s.description}")
             console.print(f"  Columns: {cols}\n")
 
 
