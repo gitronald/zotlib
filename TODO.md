@@ -1,5 +1,6 @@
 # TODO
 
+- [ ] Reorganize `zotero-js/` folder into `scripts/` (no plan)
 - [ ] Add descriptions and columns for remaining tables in `show-tables --all` (no plan)
 - [ ] Add `zotlib init` command with `zotlib.toml` config ([plan](.claude/plans/010-init-command.md))
 - [x] Restructure CLI commands with export-* naming ([plan](.claude/plans/009-restructure-cli-commands.md))
