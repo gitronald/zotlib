@@ -148,6 +148,24 @@ LIBRARIES = Table(
     },
 )
 
+# Attachment tables
+ITEM_ATTACHMENTS = Table(
+    name="itemAttachments",
+    description="PDF and file attachments linked to items",
+    columns={
+        "itemID": Column("INTEGER", "Primary key (the attachment item)"),
+        "parentItemID": Column("INTEGER", "Foreign key to the parent item"),
+        "linkMode": Column("INTEGER", "How the file is stored (0=imported, 1=linked, 2=web)"),
+        "contentType": Column("TEXT", "MIME type (e.g., application/pdf)"),
+        "charsetID": Column("INTEGER", "Character set for text attachments"),
+        "path": Column("TEXT", "File path (storage:, attachments:, or absolute)"),
+        "syncState": Column("INTEGER", "File sync status"),
+        "storageModTime": Column("INTEGER", "Storage modification timestamp"),
+        "storageHash": Column("TEXT", "File content hash"),
+        "lastProcessedModificationTime": Column("INTEGER", "Last processing timestamp"),
+    },
+)
+
 # Annotation tables
 ITEM_ANNOTATIONS = Table(
     name="itemAnnotations",
@@ -199,10 +217,15 @@ ALL_SCHEMAS = [
     COLLECTION_ITEMS,
     COLLECTIONS,
     LIBRARIES,
+    ITEM_ATTACHMENTS,
     ITEM_ANNOTATIONS,
     ITEM_TAGS,
     TAGS,
 ]
+
+
+# Lookup by table name
+SCHEMA_MAP = {s.name: s for s in ALL_SCHEMAS}
 
 
 def get_table_names() -> list[str]:

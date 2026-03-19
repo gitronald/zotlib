@@ -13,22 +13,27 @@ def test_help():
     assert "Extract and format" in result.output
 
 
-def test_schema_all():
-    result = runner.invoke(app, ["schema"])
+def test_show_tables():
+    result = runner.invoke(app, ["show-tables"])
     assert result.exit_code == 0
     assert "items" in result.output
 
 
-def test_schema_single_table():
-    result = runner.invoke(app, ["schema", "items"])
+def test_show_tables_single():
+    result = runner.invoke(app, ["show-tables", "items"])
     assert result.exit_code == 0
     assert "itemID" in result.output
 
 
-def test_schema_unknown_table():
-    result = runner.invoke(app, ["schema", "nonexistent"])
+def test_show_tables_unknown():
+    result = runner.invoke(app, ["show-tables", "nonexistent"])
     assert result.exit_code == 0
     assert "Unknown table" in result.output
+
+
+def test_show_collections_help():
+    result = runner.invoke(app, ["show-collections", "--help"])
+    assert result.exit_code == 0
 
 
 def test_export_csv_help():
@@ -51,16 +56,6 @@ def test_export_annotations_help():
     assert result.exit_code == 0
 
 
-def test_collections_help():
-    result = runner.invoke(app, ["collections", "--help"])
-    assert result.exit_code == 0
-
-
 def test_backup_help():
     result = runner.invoke(app, ["backup", "--help"])
-    assert result.exit_code == 0
-
-
-def test_tables_help():
-    result = runner.invoke(app, ["tables", "--help"])
     assert result.exit_code == 0

@@ -22,7 +22,7 @@ from zotlib.backup import create_backup, default_backup_path
 from zotlib.covers import generate_covers, generate_thumbnails
 from zotlib.formatters.apa import format_cv_as_apa
 from zotlib.export import export_collection
-from zotlib.schema import ALL_SCHEMAS
+from zotlib.tables import ALL_SCHEMAS, SCHEMA_MAP
 
 app = typer.Typer(
     name="zotlib",
@@ -34,53 +34,45 @@ console = Console()
 # --- Explore ---
 
 
-@app.command()
-def collections(
-    database: Annotated[
-        Optional[Path],
-        typer.Option("--database", "-d", help="Path to zotero.sqlite"),
-    ] = None,
-):
-    """List all collections in the Zotero library."""
-    db_path = get_database_path(database)
-    db = ZoteroDatabase(db_path)
-
-    colls = extract_collections(db)
-    unique_collections = colls.select("collectionID", "collectionName").unique()
-    counts = colls.group_by("collectionName").agg(pl.len().alias("items"))
-    unique_collections = unique_collections.join(counts, on="collectionName")
-
-    table = Table(title="Zotero Collections")
-    table.add_column("ID", style="dim")
-    table.add_column("Name", style="bold")
-    table.add_column("Items", justify="right")
-
-    for row in unique_collections.iter_rows(named=True):
-        table.add_row(
-            str(row["collectionID"]),
-            row["collectionName"],
-            str(row["items"]),
-        )
-
-    console.print(table)
-
-
-@app.command()
-def schema(
+@app.command("show-tables")
+def show_tables(
     table_name: Annotated[
         Optional[str],
         typer.Argument(help="Table name to show schema for (optional)"),
     ] = None,
+    database: Annotated[
+        Optional[Path],
+        typer.Option("--database", "-d", help="Path to zotero.sqlite"),
+    ] = None,
+    all: Annotated[
+        bool,
+        typer.Option("--all", "-a", help="List all tables in the database"),
+    ] = False,
 ):
     """Show Zotero database schema for tables used by zotlib.
 
     Examples:
-        zotlib schema
-        zotlib schema items
-        zotlib schema itemAnnotations
+        zotlib show-tables
+        zotlib show-tables items
+        zotlib show-tables itemAnnotations
+        zotlib show-tables --all
     """
-    wide = Console(width=200, force_terminal=True)
-    if table_name:
+    wide = Console(width=250, force_terminal=True)
+    if all:
+        db_path = get_database_path(database)
+        db = ZoteroDatabase(db_path)
+        table_names = db.get_table_names()
+        table = Table(title=f"All Tables in {db_path.name}")
+        table.add_column("Table", style="cyan", no_wrap=True)
+        table.add_column("Description", no_wrap=True)
+        table.add_column("Columns", no_wrap=True)
+        for name in sorted(table_names):
+            schema = SCHEMA_MAP.get(name)
+            desc = schema.description if schema else ""
+            cols = ", ".join(schema.columns.keys()) if schema else ""
+            table.add_row(name, desc, cols)
+        wide.print(table)
+    elif table_name:
         # Show specific table
         for s in ALL_SCHEMAS:
             if s.name == table_name:
@@ -110,21 +102,36 @@ def schema(
         wide.print(table)
 
 
-@app.command()
-def tables(
+
+@app.command("show-collections")
+def show_collections(
     database: Annotated[
         Optional[Path],
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
     ] = None,
 ):
-    """List all tables in the Zotero database (for debugging)."""
+    """List all collections in the Zotero library."""
     db_path = get_database_path(database)
     db = ZoteroDatabase(db_path)
 
-    table_names = db.get_table_names()
-    console.print(f"[bold]Tables in {db_path.name}:[/bold]")
-    for name in sorted(table_names):
-        console.print(f"  - {name}")
+    colls = extract_collections(db)
+    unique_collections = colls.select("collectionID", "collectionName").unique()
+    counts = colls.group_by("collectionName").agg(pl.len().alias("items"))
+    unique_collections = unique_collections.join(counts, on="collectionName")
+
+    table = Table(title="Zotero Collections")
+    table.add_column("ID", style="dim")
+    table.add_column("Name", style="bold")
+    table.add_column("Items", justify="right")
+
+    for row in unique_collections.iter_rows(named=True):
+        table.add_row(
+            str(row["collectionID"]),
+            row["collectionName"],
+            str(row["items"]),
+        )
+
+    console.print(table)
 
 
 # --- Export ---
