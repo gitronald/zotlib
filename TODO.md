@@ -1,5 +1,6 @@
 # TODO
 
+- [ ] Convert pandas to polars ([plan](.claude/plans/007-pandas-to-polars.md))
 - [x] Export with `--base-dir` for linked attachments ([plan](.claude/plans/003-export-reviews.md))
 - [x] Verify PDF annotation baking ([plan](.claude/plans/003-export-reviews.md))
 - [x] Strip "REVIEW: " prefix from titles ([plan](.claude/plans/003-export-reviews.md))
