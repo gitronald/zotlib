@@ -1,11 +1,11 @@
 """Data extraction functions for Zotero database."""
 
-import pandas as pd
+import polars as pl
 
 from zotlib.database import ZoteroDatabase
 
 
-def extract_items(db: ZoteroDatabase) -> pd.DataFrame:
+def extract_items(db: ZoteroDatabase) -> pl.DataFrame:
     """Extract all items with merged field values and types.
 
     Joins items with itemData, fieldsCombined, and itemDataValues
@@ -25,28 +25,28 @@ def extract_items(db: ZoteroDatabase) -> pd.DataFrame:
     entries = db.query(details_query)
 
     # Pivot field names to columns
-    details = entries.pivot(index="itemID", columns="fieldName", values="value")
-    details = details.rename_axis(None, axis=1).reset_index()
-    items = items.merge(details, how="left", on="itemID")
+    details = entries.pivot(
+        on="fieldName", index="itemID", values="value", aggregate_function="first"
+    )
+    items = items.join(details, on="itemID", how="left")
 
     # Merge item type names
     itemtypes = extract_itemtypes(db)
-    items = items.merge(
-        itemtypes[["itemTypeID", "typeName"]],
-        how="left",
+    items = items.join(
+        itemtypes.select("itemTypeID", "typeName"),
         on="itemTypeID",
-        validate="m:1",
+        how="left",
     )
 
     return items
 
 
-def extract_itemtypes(db: ZoteroDatabase) -> pd.DataFrame:
+def extract_itemtypes(db: ZoteroDatabase) -> pl.DataFrame:
     """Extract item type definitions."""
     return db.query("SELECT * FROM itemTypes")
 
 
-def extract_creators(db: ZoteroDatabase) -> pd.DataFrame:
+def extract_creators(db: ZoteroDatabase) -> pl.DataFrame:
     """Extract item-creator relationships with creator details."""
     query = """
     SELECT itemCreators.itemID, itemCreators.creatorID, itemCreators.creatorTypeID,
@@ -58,7 +58,7 @@ def extract_creators(db: ZoteroDatabase) -> pd.DataFrame:
     return db.query(query)
 
 
-def extract_collections(db: ZoteroDatabase) -> pd.DataFrame:
+def extract_collections(db: ZoteroDatabase) -> pl.DataFrame:
     """Extract collection memberships with collection metadata."""
     query = """
     SELECT collectionItems.collectionID, collectionItems.itemID,
@@ -70,18 +70,21 @@ def extract_collections(db: ZoteroDatabase) -> pd.DataFrame:
     return db.query(query)
 
 
-def extract_libraries(db: ZoteroDatabase) -> pd.DataFrame:
+def extract_libraries(db: ZoteroDatabase) -> pl.DataFrame:
     """Extract library metadata."""
     return db.query("SELECT * FROM libraries")
 
 
-def _get_first_notnull(row: pd.Series) -> str | None:
-    """Get first non-null value in a row."""
-    valid_index = row.first_valid_index()
-    return None if valid_index is None else row[valid_index]
+def _get_first_notnull(row: dict, cols: list[str]) -> str | None:
+    """Get first non-null value from specified columns in a row dict."""
+    for col in cols:
+        val = row.get(col)
+        if val is not None:
+            return val
+    return None
 
 
-def _clean_items(items: pd.DataFrame) -> pd.DataFrame:
+def _clean_items(items: pl.DataFrame) -> pl.DataFrame:
     """Clean and transform items DataFrame."""
     # Condense publication title from multiple columns
     title_cols = [
@@ -96,37 +99,53 @@ def _clean_items(items: pd.DataFrame) -> pd.DataFrame:
     ]
     existing_cols = [c for c in title_cols if c in items.columns]
     if existing_cols:
-        items["publication"] = items[existing_cols].apply(_get_first_notnull, axis=1)
+        items = items.with_columns(
+            pl.coalesce([pl.col(c) for c in existing_cols]).alias("publication")
+        )
 
     # Clean dates
-    items["date_raw"] = items["date"].copy()
-    items["datefmt"] = items["date_raw"].fillna("").str.split(" ", expand=True)[0]
+    items = items.rename({"date": "date_raw"})
 
-    # Handle malformed dates like "2003-01-00" or "2020-00-00"
-    items["datefmt"] = items["datefmt"].str.replace("-00", "-01", regex=False)
+    # Extract first part before space, handle malformed dates
+    items = items.with_columns(
+        pl.col("date_raw")
+        .fill_null("")
+        .str.split(" ")
+        .list.first()
+        .str.replace_all("-00", "-01", literal=True)
+        .alias("datefmt")
+    )
 
-    items["date"] = pd.to_datetime(items["datefmt"], errors="coerce")
-    items["year"] = items.date.dt.year
-    items["month"] = items.date.dt.month
+    items = items.with_columns(
+        pl.col("datefmt").str.to_date("%Y-%m-%d", strict=False).alias("date")
+    )
+    items = items.with_columns(
+        pl.col("date").dt.year().alias("year"),
+        pl.col("date").dt.month().alias("month"),
+    )
 
     # Clean encoded characters in pages
     if "pages" in items.columns:
-        items["pages"] = items["pages"].fillna("").str.replace("–", "-")
+        items = items.with_columns(
+            pl.col("pages").fill_null("").str.replace_all("\u2013", "-", literal=True).alias("pages")
+        )
 
     return items
 
 
-def _add_authors(items: pd.DataFrame, creators: pd.DataFrame) -> pd.DataFrame:
+def _add_authors(items: pl.DataFrame, creators: pl.DataFrame) -> pl.DataFrame:
     """Add concatenated authors string to items."""
-    creators = creators.copy()
-    creators["authors"] = creators["firstName"] + " " + creators["lastName"]
-    item_creators = creators.groupby("itemID")["authors"].apply(
-        lambda x: ", ".join(x)
+    item_creators = (
+        creators.with_columns(
+            (pl.col("firstName") + " " + pl.col("lastName")).alias("authors")
+        )
+        .group_by("itemID")
+        .agg(pl.col("authors").str.join(", "))
     )
-    return items.merge(item_creators, how="left", on="itemID")
+    return items.join(item_creators, on="itemID", how="left")
 
 
-def extract_attachments(db: ZoteroDatabase) -> pd.DataFrame:
+def extract_attachments(db: ZoteroDatabase) -> pl.DataFrame:
     """Extract PDF attachment paths with parent item and storage key.
 
     Returns DataFrame with: parentItemID, key (storage directory), path (filename).
@@ -142,10 +161,32 @@ def extract_attachments(db: ZoteroDatabase) -> pd.DataFrame:
     return db.query(query)
 
 
+def extract_annotations(db: ZoteroDatabase) -> pl.DataFrame:
+    """Extract PDF annotations from itemAnnotations table.
+
+    Returns DataFrame with: itemID, parentItemID, type, text, comment,
+    color, pageLabel, sortIndex, position, isExternal.
+    """
+    return db.query("SELECT * FROM itemAnnotations")
+
+
+def extract_tags(db: ZoteroDatabase) -> pl.DataFrame:
+    """Extract item tags with tag names.
+
+    Returns DataFrame with: itemID, tagID, type, name.
+    """
+    query = """
+    SELECT itemTags.itemID, itemTags.tagID, itemTags.type, tags.name
+    FROM itemTags
+    JOIN tags ON itemTags.tagID = tags.tagID
+    """
+    return db.query(query)
+
+
 def extract_cv_items(
     db: ZoteroDatabase,
     collection_name: str,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """Extract items from a specific collection for CV use.
 
     Args:
@@ -160,8 +201,10 @@ def extract_cv_items(
     creators = extract_creators(db)
 
     # Filter by collection
-    cv_collection = collections.query(f"collectionName == '{collection_name}'")
-    cv_items = items.query("itemID in @cv_collection['itemID']").copy()
+    cv_item_ids = collections.filter(
+        pl.col("collectionName") == collection_name
+    )["itemID"]
+    cv_items = items.filter(pl.col("itemID").is_in(cv_item_ids))
 
     # Add authors and clean data
     cv_items = _add_authors(cv_items, creators)
@@ -185,4 +228,4 @@ def extract_cv_items(
     ]
     existing_cols = [c for c in cols_main if c in cv_items.columns]
 
-    return cv_items[existing_cols]
+    return cv_items.select(existing_cols)

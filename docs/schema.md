@@ -121,3 +121,57 @@ Library definitions (personal, group libraries)
 | storageVersion | INTEGER | Storage version |
 | lastSync | TIMESTAMP | Last sync timestamp |
 | archived | INTEGER | Archive status (0 or 1) |
+
+## itemAttachments
+
+PDF and file attachments linked to items
+
+| Name | Type | Description |
+|------|------|-------------|
+| itemID | INTEGER | Primary key (the attachment item) |
+| parentItemID | INTEGER | Foreign key to the parent item |
+| linkMode | INTEGER | How the file is stored (0=imported, 1=linked, 2=web) |
+| contentType | TEXT | MIME type (e.g., application/pdf) |
+| charsetID | INTEGER | Character set for text attachments |
+| path | TEXT | File path (storage:, attachments:, or absolute) |
+| syncState | INTEGER | File sync status |
+| storageModTime | INTEGER | Storage modification timestamp |
+| storageHash | TEXT | File content hash |
+| lastProcessedModificationTime | INTEGER | Last processing timestamp |
+
+## itemAnnotations
+
+PDF annotations created in Zotero's built-in reader
+
+| Name | Type | Description |
+|------|------|-------------|
+| itemID | INTEGER | Primary key (the annotation item) |
+| parentItemID | INTEGER | Foreign key to the PDF attachment item |
+| type | INTEGER | Annotation type (1=highlight, 2=note, 3=image, 5=underline) |
+| authorName | TEXT | Name of annotation author |
+| text | TEXT | Highlighted or selected text |
+| comment | TEXT | User comment on the annotation |
+| color | TEXT | Hex color string (e.g., #ffd400) |
+| pageLabel | TEXT | Page number label |
+| sortIndex | TEXT | Lexicographic sort index for ordering |
+| position | TEXT | JSON with pageIndex and rects/paths coordinates |
+| isExternal | INTEGER | Whether annotation is external (0 or 1) |
+
+## itemTags
+
+Links items to tags
+
+| Name | Type | Description |
+|------|------|-------------|
+| itemID | INTEGER | Foreign key to items |
+| tagID | INTEGER | Foreign key to tags |
+| type | INTEGER | Tag type (0=manual, 1=automatic) |
+
+## tags
+
+Tag definitions
+
+| Name | Type | Description |
+|------|------|-------------|
+| tagID | INTEGER | Primary key |
+| name | TEXT | Tag display name |

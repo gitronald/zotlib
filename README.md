@@ -11,12 +11,16 @@ zotlib/
 │   ├── config.py                # Database path discovery
 │   ├── database.py              # SQLite interface
 │   ├── extractors.py            # Data extraction functions
+│   ├── export.py                # Collection export (annotations + PDFs)
 │   ├── backup.py                # Zotero directory backup
-│   ├── schema.py                # Zotero database schema definitions
+│   ├── tables.py                # Zotero database table definitions
+│   ├── covers.py                # PDF cover generation
 │   └── formatters/apa.py        # APA citation formatter
 ├── zotero-js/                   # Zotero JavaScript scripts
 │   ├── extract-annotations.js   # Interactive annotation extractor
 │   ├── extract-annotations-cli.js
+│   ├── extract-annotations-debug.js
+│   ├── create-parents-for-standalone.js
 │   └── run-extract.sh           # Shell wrapper
 ├── scripts/                     # Utility scripts
 │   └── generate_schema_docs.py  # Generate docs/schema.md
@@ -26,24 +30,13 @@ zotlib/
 └── pyproject.toml               # Project configuration
 ```
 
-## TODO
-
-- [ ] Use polars throughout
-- [x] Add schema for Zotero db tables (include types)
-- [x] Organize JavaScript files
-- [ ] Explore ways to update records via JavaScript
-
-## Python Library
-
-Extract bibliographic data from Zotero SQLite databases and format as APA references.
-
-### Installation
+## Installation
 
 ```bash
 uv sync
 ```
 
-### Configuration
+## Configuration
 
 The database path can be configured via:
 
@@ -51,25 +44,68 @@ The database path can be configured via:
 2. **Environment variable**: `ZOTERO_DATABASE=/path/to/zotero.sqlite`
 3. **Auto-discovery**: Checks common locations (Linux, WSL, macOS)
 
-### CLI Commands
+## CLI Commands
+
+### Export data
 
 ```bash
-# Extract all data with auto-discovered database
-zotlib extract
+# Export all tables as CSV
+zotlib export-csv
 
-# Extract CV items from a specific collection as APA
-zotlib extract -c rer -f apa
+# Export a collection as CSV
+zotlib export-csv -c publications
 
+# Format a collection as APA references
+zotlib export-apa -c publications
+
+# Generate cover images and thumbnails
+zotlib export-covers -c publications
+zotlib export-covers -c publications -p "/path/to/linked-pdfs/"
+
+# Export annotated PDFs and markdown notes
+zotlib export-annotations -c mycollection
+zotlib export-annotations -c mycollection -p "/path/to/linked-pdfs/"
+```
+
+### Explore and manage
+
+```bash
 # List available collections
-zotlib collections
+zotlib show-collections
 
-# List database tables (debugging)
-zotlib tables
+# Show database tables
+zotlib show-tables
+zotlib show-tables items
 
 # Back up the Zotero data directory
 zotlib backup
-zotlib backup -o ~/backups/zotero-2026-03-02.tar.bz2
 ```
+
+### Output structure
+
+```
+output/
+├── export-csv/                     # Bibliographic metadata
+│   └── publications.csv
+├── export-apa/                     # APA-formatted references
+│   └── publications.md
+├── export-covers/                  # PDF cover images
+│   └── publications/
+│       ├── fullsize/
+│       └── thumbnails/
+└── export-annotations/             # Annotated PDFs + notes
+    └── mycollection/
+        └── author-year-title/
+            ├── paper.pdf
+            └── annotations.md
+```
+
+### Export annotations features
+
+- Multi-attachment support: each PDF gets only its own annotations
+- Standalone attachment support: PDFs added directly to a collection
+- Linked attachment resolution via `--pdfs-dir`
+- "REVIEW: " prefix stripping from titles
 
 ### Python API
 
@@ -81,137 +117,31 @@ items = extract_cv_items(db, collection_name="mypapers")
 apa_output = format_cv_as_apa(items, output_path="output/apa.md")
 ```
 
----
+## Zotero JavaScript Scripts
 
-# JavaScript Annotation Extraction Scripts
+Utilities for Zotero's JavaScript console (Tools > Developer > Run JavaScript).
 
-Utilities for extracting PDF annotations from Zotero 7 and saving them as markdown files.
+### create-parents-for-standalone.js
 
-## extract-annotations.js
+Creates parent document items for standalone PDF attachments in a collection. Useful when PDFs were added directly without metadata — creates a parent item using the filename as the title and re-parents the attachment.
 
-**Interactive annotation extractor with file save dialog.**
+### extract-annotations.js
 
-Run this script in Zotero's JavaScript console (Tools → Developer → Run JavaScript) to extract all annotations from a selected item's PDF and save them to a markdown file of your choice.
+Interactive annotation extractor with file save dialog. Select an item, run the script, and save annotations as markdown.
 
-### Usage
+### extract-annotations-cli.js
 
-1. Select a single item in Zotero (the parent item or its PDF attachment)
-2. Open Tools → Developer → Run JavaScript
-3. Paste the script contents and click "Run"
-4. Choose where to save the markdown file in the file picker dialog
-
-### Features
-
-- Extracts highlights, notes, underlines, and image annotations
-- Preserves annotation comments
-- Color-coded labels for highlights (yellow, red, green, blue, purple)
-- Sorted by page number and position within page
-- Includes item metadata (title, authors, year)
-
-### Output Format
-
-```markdown
-# Annotations: Paper Title
-
-**Authors:** Smith, John; Doe, Jane
-**Year:** 2024
-**Extracted:** 1/17/2026
-**Total Annotations:** 15
-
----
-
-## Page 1
-
-[yellow] **Highlight:**
-> This is the highlighted text from the PDF
-
-**Note:** My comment about this highlight
-
-## Page 2
-
-[red] **Highlight:**
-> Another highlight with a different color
-
-...
-```
-
----
-
-## extract-annotations-cli.js
-
-**Headless annotation extractor for CLI/automation use.**
-
-This version skips the file picker dialog and writes directly to a predetermined directory, making it suitable for command-line invocation via Zotero's HTTP debug API.
-
-### Configuration
-
-Edit the `OUTPUT_DIR` variable at the top of the script:
-
-```javascript
-var OUTPUT_DIR = '/path/to/your/output/directory/';
-```
-
-Default: `~/Desktop/zotero-annotations/`
-
-### Output Filename
-
-Files are named with the pattern:
-```
-{Title}_{Timestamp}.md
-```
-
-Example: `My_Research_Paper_2026-01-17T14-30-00.md`
-
----
-
-## run-extract.sh
-
-**Shell script to invoke the CLI extractor remotely.**
-
-### Prerequisites
-
-1. Zotero 7 must be running
-2. Enable remote debugging: Settings → Advanced → "Allow other applications to communicate with Zotero"
-3. Select an item in Zotero before running
-
-### Usage
+Headless version that writes to `~/Desktop/zotero-annotations/`. Can be invoked via Zotero's HTTP debug API:
 
 ```bash
 ./zotero-js/run-extract.sh
 ```
 
-### How It Works
+Requires: Settings > Advanced > "Allow other applications to communicate with Zotero"
 
-The script sends the JavaScript file to Zotero's local debug endpoint:
+## Annotation Format
 
-```bash
-curl -X POST "http://127.0.0.1:23119/debug" \
-    -H "Content-Type: application/javascript" \
-    --data-binary @zotero-js/extract-annotations-cli.js
-```
-
----
-
-## extract-annotations-debug.js
-
-**Diagnostic script for troubleshooting.**
-
-Use this if the main scripts aren't working. It outputs step-by-step debug information about:
-
-- Whether ZoteroPane is accessible
-- Selected items and their types
-- Attachment details and content types
-- Annotation data structure
-
-### Usage
-
-1. Select an item in Zotero
-2. Run in Tools → Developer → Run JavaScript
-3. Check the return value for diagnostic output
-
----
-
-## Annotation Types Supported
+### Types
 
 | Type | Extracted Data |
 |------|----------------|
@@ -220,48 +150,14 @@ Use this if the main scripts aren't working. It outputs step-by-step debug infor
 | Underline | Text + comment |
 | Image | Comment only (image not exported) |
 
-## Color Labels
-
-The scripts convert Zotero's hex colors to readable labels:
+### Color Labels
 
 | Hex Code | Label |
 |----------|-------|
-| `#ffd400` | [yellow] |
-| `#ff6666` | [red] |
-| `#5fb236` | [green] |
-| `#2ea8e5` | [blue] |
-| `#a28ae5` | [purple] |
-| `#e56eee` | [magenta] |
-| `#f19837` | [orange] |
-
----
-
-## Safety
-
-These scripts are **read-only** with respect to your Zotero database. They only:
-
-- Read item metadata and annotations
-- Write to external markdown files
-
-No Zotero data is modified.
-
----
-
-## Troubleshooting
-
-### "undefined" with no output
-
-The async IIFE pattern can cause silent failures. Use `extract-annotations-debug.js` to diagnose.
-
-### No file picker appears
-
-The FilePicker API may have changed. Try the CLI version (`extract-annotations-cli.js`) which bypasses the dialog.
-
-### curl connection refused
-
-Ensure Zotero is running and remote debugging is enabled in Settings → Advanced.
-
-### No annotations found
-
-- Make sure the PDF has annotations made in Zotero's PDF reader (not imported from the original PDF)
-- Check that you selected the parent item or its PDF attachment
+| `#ffd400` | yellow |
+| `#ff6666` | red |
+| `#5fb236` | green |
+| `#2ea8e5` | blue |
+| `#a28ae5` | purple |
+| `#e56eee` | magenta |
+| `#f19837` | orange |

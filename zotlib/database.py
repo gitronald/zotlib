@@ -5,7 +5,7 @@ from pathlib import Path
 from contextlib import contextmanager
 from typing import Iterator
 
-import pandas as pd
+import polars as pl
 
 
 class ZoteroDatabase:
@@ -51,7 +51,7 @@ class ZoteroDatabase:
             cursor.execute(f"SELECT * FROM {table_name} LIMIT 0")
             return [desc[0] for desc in cursor.description]
 
-    def query(self, sql: str) -> pd.DataFrame:
+    def query(self, sql: str) -> pl.DataFrame:
         """Execute a query and return results as DataFrame.
 
         Args:
@@ -61,4 +61,10 @@ class ZoteroDatabase:
             DataFrame with query results.
         """
         with self.connection() as conn:
-            return pd.read_sql_query(sql, conn)
+            cursor = conn.cursor()
+            cursor.execute(sql)
+            columns = [desc[0] for desc in cursor.description]
+            rows = cursor.fetchall()
+            return pl.DataFrame(
+                {col: [row[i] for row in rows] for i, col in enumerate(columns)}
+            )
