@@ -15,8 +15,8 @@ build/
 .claude
 
 # Data/output
-data/
-outputs/
+data
+output/
 *.csv
 *.sqlite
 
