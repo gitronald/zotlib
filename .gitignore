@@ -15,7 +15,7 @@ build/
 .claude
 
 # Testing
-.pytest_cache/
+.pytest_cache
 
 # Data/output
 data
