@@ -923,7 +923,7 @@ wheels = [
 
 [[package]]
 name = "zotlib"
-version = "0.3.0"
+version = "0.3.1a0"
 source = { editable = "." }
 dependencies = [
     { name = "pillow" },
