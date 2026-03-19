@@ -29,8 +29,8 @@ def resolve_pdf_path(
     if path_field.startswith("attachments:"):
         if base_dir is None:
             raise ValueError(
-                "Linked attachment found but no --base-dir provided. "
-                "Set the base directory for linked attachments."
+                "Linked attachment found but no --pdfs-dir provided. "
+                "Set the directory for linked PDF attachments."
             )
         relative = path_field.removeprefix("attachments:")
         return base_dir / relative

@@ -97,7 +97,7 @@ Each item in the collection is exported as a subdirectory containing:
 Features:
 - Multi-attachment support: each PDF gets only its own annotations
 - Standalone attachment support: PDFs added directly to a collection
-- Linked attachment resolution via `--base-dir`
+- Linked attachment resolution via `--pdfs-dir`
 - "REVIEW: " prefix stripping from titles
 
 ### Python API
