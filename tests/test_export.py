@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import fitz
-import pandas as pd
+import polars as pl
 import pytest
 
 from zotlib.export import (
@@ -26,7 +26,7 @@ from zotlib.export import (
 @pytest.fixture
 def sample_item_row():
     """Sample item metadata for markdown generation."""
-    return pd.Series({
+    return {
         "itemID": 42,
         "title": "Social Media Effects on Youth",
         "authors": "John Smith, Jane Doe",
@@ -36,13 +36,13 @@ def sample_item_row():
         "url": "https://example.com/paper",
         "dateAdded": "2024-06-15 10:30:00",
         "tags": "review, social media, youth",
-    })
+    }
 
 
 @pytest.fixture
 def sample_annotations():
     """Sample annotation rows for testing."""
-    return pd.DataFrame([
+    return pl.DataFrame([
         {
             "itemID": 100,
             "parentItemID": 50,
@@ -155,26 +155,26 @@ class TestAnnotationTypes:
 
 class TestMakeItemDirname:
     def test_basic(self):
-        row = pd.Series({"authors": "John Smith, Jane Doe", "year": 2024, "title": "A Study"})
+        row = {"authors": "John Smith, Jane Doe", "year": 2024, "title": "A Study"}
         result = make_item_dirname(row)
         assert result == "smith-2024-a-study"
 
     def test_no_author(self):
-        row = pd.Series({"authors": "", "year": 2024, "title": "Some Title"})
+        row = {"authors": "", "year": 2024, "title": "Some Title"}
         result = make_item_dirname(row)
         assert result.startswith("unknown-2024-")
 
     def test_no_year(self):
-        row = pd.Series({"authors": "John Smith", "year": float("nan"), "title": "Title"})
+        row = {"authors": "John Smith", "year": None, "title": "Title"}
         result = make_item_dirname(row)
         assert "nd" in result
 
     def test_long_title_truncated(self):
-        row = pd.Series({
+        row = {
             "authors": "Smith",
             "year": 2024,
             "title": "A" * 100,
-        })
+        }
         result = make_item_dirname(row)
         # 60 char title limit + author + year
         assert len(result) < 80
@@ -214,10 +214,19 @@ class TestFormatAnnotationsMarkdown:
         assert "> Another key finding on page five" in md
 
     def test_empty_annotations(self, sample_item_row):
-        empty = pd.DataFrame(columns=[
-            "itemID", "type", "text", "comment", "color",
-            "pageLabel", "sortIndex", "position", "paperItemID",
-        ])
+        empty = pl.DataFrame(
+            schema={
+                "itemID": pl.Int64,
+                "type": pl.Int64,
+                "text": pl.Utf8,
+                "comment": pl.Utf8,
+                "color": pl.Utf8,
+                "pageLabel": pl.Utf8,
+                "sortIndex": pl.Utf8,
+                "position": pl.Utf8,
+                "paperItemID": pl.Int64,
+            }
+        )
         md = format_annotations_markdown(sample_item_row, empty)
         assert "annotation_count: 0" in md
         assert "## Page" not in md
@@ -245,17 +254,26 @@ class TestBakeAnnotations:
         doc.close()
 
     def test_no_annotations(self, simple_pdf, tmp_path):
-        empty = pd.DataFrame(columns=[
-            "itemID", "type", "text", "comment", "color",
-            "pageLabel", "sortIndex", "position", "paperItemID",
-        ])
+        empty = pl.DataFrame(
+            schema={
+                "itemID": pl.Int64,
+                "type": pl.Int64,
+                "text": pl.Utf8,
+                "comment": pl.Utf8,
+                "color": pl.Utf8,
+                "pageLabel": pl.Utf8,
+                "sortIndex": pl.Utf8,
+                "position": pl.Utf8,
+                "paperItemID": pl.Int64,
+            }
+        )
         output_pdf = tmp_path / "output.pdf"
         warnings = bake_annotations(simple_pdf, empty, output_pdf)
         assert output_pdf.exists()
         assert warnings == []
 
     def test_bad_position_json(self, simple_pdf, tmp_path):
-        bad_ann = pd.DataFrame([{
+        bad_ann = pl.DataFrame([{
             "itemID": 200,
             "type": 1,
             "text": "test",
@@ -269,7 +287,7 @@ class TestBakeAnnotations:
         assert any("Bad position JSON" in w for w in warnings)
 
     def test_page_out_of_range(self, simple_pdf, tmp_path):
-        ann = pd.DataFrame([{
+        ann = pl.DataFrame([{
             "itemID": 201,
             "type": 1,
             "text": "test",
@@ -298,26 +316,35 @@ class TestStripReviewPrefix:
         assert _strip_review_prefix("") == ""
 
     def test_prefix_in_dirname(self):
-        row = pd.Series({
+        row = {
             "authors": "John Smith",
             "year": 2024,
             "title": "REVIEW: A Study of Effects",
-        })
+        }
         result = make_item_dirname(row)
         assert "review" not in result
         assert "a-study-of-effects" in result
 
     def test_prefix_in_markdown(self):
-        item = pd.Series({
+        item = {
             "itemID": 1,
             "title": "REVIEW: Social Media Effects",
             "authors": "Smith",
             "year": 2024,
-        })
-        empty = pd.DataFrame(columns=[
-            "itemID", "type", "text", "comment", "color",
-            "pageLabel", "sortIndex", "position", "paperItemID",
-        ])
+        }
+        empty = pl.DataFrame(
+            schema={
+                "itemID": pl.Int64,
+                "type": pl.Int64,
+                "text": pl.Utf8,
+                "comment": pl.Utf8,
+                "color": pl.Utf8,
+                "pageLabel": pl.Utf8,
+                "sortIndex": pl.Utf8,
+                "position": pl.Utf8,
+                "paperItemID": pl.Int64,
+            }
+        )
         md = format_annotations_markdown(item, empty)
         assert 'title: "Social Media Effects"' in md
         assert "REVIEW:" not in md

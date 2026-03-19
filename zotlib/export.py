@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 
 import fitz
-import pandas as pd
+import polars as pl
 
 from zotlib.covers import resolve_pdf_path, sanitize_filename
 from zotlib.database import ZoteroDatabase
@@ -49,7 +49,7 @@ COLOR_LABELS = {
 
 def _str_or(value, default: str = "") -> str:
     """Coerce a value to string, returning default for NaN/None."""
-    if pd.isna(value):
+    if value is None:
         return default
     return str(value) if value else default
 
@@ -85,7 +85,7 @@ def convert_zotero_rect(
 def get_collection_items(
     db: ZoteroDatabase,
     collection_name: str,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """Get items in a collection with full metadata, authors, and tags.
 
     Args:
@@ -101,25 +101,25 @@ def get_collection_items(
     tags = extract_tags(db)
 
     # Filter to collection
-    coll = collections.query(f"collectionName == '{collection_name}'")
-    if coll.empty:
+    coll = collections.filter(pl.col("collectionName") == collection_name)
+    if len(coll) == 0:
         raise ValueError(f"Collection not found: {collection_name}")
 
-    coll_items = items.query("itemID in @coll['itemID']").copy()
+    coll_item_ids = coll["itemID"]
+    coll_items = items.filter(pl.col("itemID").is_in(coll_item_ids))
 
     # Exclude attachment and note types (handled separately)
-    coll_items = coll_items.query("typeName not in ['attachment', 'note']")
+    coll_items = coll_items.filter(~pl.col("typeName").is_in(["attachment", "note"]))
 
     # Add authors
     coll_items = _add_authors(coll_items, creators)
 
     # Add tags (comma-separated)
     item_tags = (
-        tags.groupby("itemID")["name"]
-        .apply(lambda x: ", ".join(sorted(x)))
-        .rename("tags")
+        tags.group_by("itemID")
+        .agg(pl.col("name").sort().str.join(", ").alias("tags"))
     )
-    coll_items = coll_items.merge(item_tags, how="left", on="itemID")
+    coll_items = coll_items.join(item_tags, on="itemID", how="left")
 
     # Clean dates
     coll_items = _clean_items(coll_items)
@@ -130,7 +130,7 @@ def get_collection_items(
 def get_standalone_attachments(
     db: ZoteroDatabase,
     collection_name: str,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """Get standalone PDF attachments in a collection.
 
     These are PDFs added directly to a collection without a parent item.
@@ -158,13 +158,19 @@ def get_standalone_attachments(
       AND ia.path IS NOT NULL
     """
     with db.connection() as conn:
-        return pd.read_sql_query(query, conn, params=[collection_name])
+        cursor = conn.cursor()
+        cursor.execute(query, [collection_name])
+        columns = [desc[0] for desc in cursor.description]
+        rows = cursor.fetchall()
+        return pl.DataFrame(
+            {col: [row[i] for row in rows] for i, col in enumerate(columns)}
+        )
 
 
 def get_item_annotations(
     db: ZoteroDatabase,
     item_ids: set[int],
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """Get annotations for items, joined through the attachment chain.
 
     The join path: annotation.parentItemID -> attachment.itemID,
@@ -188,7 +194,7 @@ def get_item_annotations(
     return db.query(query)
 
 
-def make_item_dirname(item_row: pd.Series) -> str:
+def make_item_dirname(item_row: dict) -> str:
     """Build a subdirectory name from item metadata.
 
     Format: {first-author-last}-{year}-{short-title}
@@ -197,7 +203,7 @@ def make_item_dirname(item_row: pd.Series) -> str:
     first_author = authors.split(",")[0].strip().split()[-1] if authors else "unknown"
 
     year = item_row.get("year")
-    year_str = str(int(year)) if pd.notna(year) else "nd"
+    year_str = str(int(year)) if year is not None else "nd"
 
     title = _strip_review_prefix(_str_or(item_row.get("title"), "untitled"))
     short_title = title[:60].strip()
@@ -208,7 +214,7 @@ def make_item_dirname(item_row: pd.Series) -> str:
 
 def bake_annotations(
     pdf_path: Path,
-    annotations_df: pd.DataFrame,
+    annotations_df: pl.DataFrame,
     output_path: Path,
 ) -> list[str]:
     """Copy a PDF and bake Zotero annotations into it.
@@ -224,7 +230,7 @@ def bake_annotations(
     warnings = []
     doc = fitz.open(pdf_path)
 
-    for _, ann in annotations_df.iterrows():
+    for ann in annotations_df.iter_rows(named=True):
         ann_type = ANNOTATION_TYPES.get(ann["type"], "")
         position_raw = _str_or(ann.get("position"))
         comment = _str_or(ann.get("comment"))
@@ -303,13 +309,13 @@ def bake_annotations(
 
 
 def format_annotations_markdown(
-    item_row: pd.Series,
-    annotations_df: pd.DataFrame,
+    item_row: dict,
+    annotations_df: pl.DataFrame,
 ) -> str:
     """Generate markdown with YAML frontmatter and page-grouped annotations.
 
     Args:
-        item_row: Series with item metadata (title, authors, year, etc.).
+        item_row: Dict with item metadata (title, authors, year, etc.).
         annotations_df: DataFrame of annotations sorted by sortIndex.
 
     Returns:
@@ -321,7 +327,7 @@ def format_annotations_markdown(
     title = _strip_review_prefix(_str_or(item_row.get("title"), "Untitled"))
     authors = _str_or(item_row.get("authors"))
     year = item_row.get("year")
-    year_str = str(int(year)) if pd.notna(year) else ""
+    year_str = str(int(year)) if year is not None else ""
     publication = _str_or(item_row.get("publicationTitle"))
     doi = _str_or(item_row.get("DOI"))
     date_added = _str_or(item_row.get("dateAdded"))
@@ -352,7 +358,7 @@ def format_annotations_markdown(
     # Annotations grouped by page
     current_page = -1
 
-    for _, ann in annotations_df.iterrows():
+    for ann in annotations_df.iter_rows(named=True):
         ann_type = ANNOTATION_TYPES.get(ann["type"], str(ann["type"]))
         text = _str_or(ann.get("text"))
         comment = _str_or(ann.get("comment"))
@@ -423,7 +429,7 @@ def _strip_review_prefix(title: str) -> str:
 
 
 def _resolve_attachment_pdfs(
-    attachments: pd.DataFrame,
+    attachments: pl.DataFrame,
     item_id: int,
     storage_dir: Path,
     base_dir: Path | None,
@@ -434,9 +440,9 @@ def _resolve_attachment_pdfs(
 
     Returns list of (attachment_itemID, resolved_path) tuples.
     """
-    item_atts = attachments[attachments["parentItemID"] == item_id]
+    item_atts = attachments.filter(pl.col("parentItemID") == item_id)
     resolved = []
-    for _, att in item_atts.iterrows():
+    for att in item_atts.iter_rows(named=True):
         try:
             pdf_path = resolve_pdf_path(
                 storage_dir, att["key"], att["path"], base_dir=base_dir
@@ -449,8 +455,8 @@ def _resolve_attachment_pdfs(
 
 
 def _export_item(
-    item_row: pd.Series,
-    all_anns: pd.DataFrame,
+    item_row: dict,
+    all_anns: pl.DataFrame,
     att_pdfs: list[tuple[int, Path]],
     output_dir: Path,
     warnings: list[str],
@@ -459,7 +465,7 @@ def _export_item(
     """Export a single item with per-attachment annotation baking.
 
     Args:
-        item_row: Series with item metadata.
+        item_row: Dict with item metadata.
         all_anns: DataFrame of annotations with parentItemID column
             pointing to specific attachments.
         att_pdfs: List of (attachment_itemID, pdf_path) tuples.
@@ -489,7 +495,7 @@ def _export_item(
             output_pdf = item_dir / output_name
 
             # Get annotations for this specific attachment
-            att_anns = all_anns[all_anns["parentItemID"] == att_id]
+            att_anns = all_anns.filter(pl.col("parentItemID") == att_id)
 
             if len(att_anns) > 0:
                 ann_warnings = bake_annotations(pdf_path, att_anns, output_pdf)
@@ -534,7 +540,7 @@ def export_collection(
 
     # Get regular items in collection
     items = get_collection_items(db, collection_name)
-    item_ids = set(items["itemID"])
+    item_ids = set(items["itemID"].to_list())
 
     # Get standalone attachments in collection
     standalone = get_standalone_attachments(db, collection_name)
@@ -547,7 +553,7 @@ def export_collection(
 
     # Get attachments and annotations for regular items
     attachments = extract_attachments(db)
-    attachments = attachments[attachments["parentItemID"].isin(item_ids)]
+    attachments = attachments.filter(pl.col("parentItemID").is_in(list(item_ids)))
     annotations = get_item_annotations(db, item_ids)
 
     exported = 0
@@ -555,10 +561,10 @@ def export_collection(
     warnings = []
 
     # Export regular items
-    for _, item in items.iterrows():
+    for item in items.iter_rows(named=True):
         item_id = item["itemID"]
         title = _str_or(item.get("title"), "untitled")
-        item_anns = annotations[annotations["paperItemID"] == item_id]
+        item_anns = annotations.filter(pl.col("paperItemID") == item_id)
 
         att_pdfs = _resolve_attachment_pdfs(
             attachments, item_id, storage_dir, base_dir, warnings, title
@@ -570,7 +576,7 @@ def export_collection(
             skipped += 1
 
     # Export standalone attachments
-    for _, att in standalone.iterrows():
+    for att in standalone.iter_rows(named=True):
         att_id = att["itemID"]
         title = _strip_review_prefix(
             Path(att["title"]).stem if att["title"] else "untitled"
@@ -595,13 +601,13 @@ def export_collection(
         """
         att_anns = db.query(att_anns_query)
 
-        # Build a minimal item-like Series for directory naming and markdown
-        item_row = pd.Series({
+        # Build a minimal item-like dict for directory naming and markdown
+        item_row = {
             "itemID": att_id,
             "title": title,
             "authors": "",
-            "year": float("nan"),
-        })
+            "year": None,
+        }
 
         if _export_item(item_row, att_anns, att_pdfs, output_dir, warnings, console):
             exported += 1
