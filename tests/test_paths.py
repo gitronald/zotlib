@@ -1,10 +1,10 @@
-"""Tests for the covers module."""
+"""Tests for the paths module."""
 
 from pathlib import Path
 
 import pytest
 
-from zotlib.covers import resolve_pdf_path, sanitize_filename
+from zotlib.paths import resolve_pdf_path, sanitize_filename
 
 
 class TestResolvePdfPath:

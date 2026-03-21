@@ -7,7 +7,6 @@ from pathlib import Path
 import fitz
 import polars as pl
 
-from zotlib.covers import resolve_pdf_path, sanitize_filename
 from zotlib.database import ZoteroDatabase
 from zotlib.extractors import (
     _add_authors,
@@ -18,6 +17,7 @@ from zotlib.extractors import (
     extract_items,
     extract_tags,
 )
+from zotlib.paths import resolve_pdf_path, sanitize_filename
 
 # Zotero annotation type integers to names
 ANNOTATION_TYPES = {

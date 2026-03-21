@@ -15,6 +15,7 @@ zotlib/
 │   ├── backup.py                # Zotero directory backup
 │   ├── tables.py                # Zotero database table definitions
 │   ├── covers.py                # PDF cover generation
+│   ├── paths.py                 # Path resolution and filename utilities
 │   └── formatters/apa.py        # APA citation formatter
 ├── scripts/                     # Utility scripts
 │   ├── extract-annotations.js   # Annotation extractor (interactive + headless)
