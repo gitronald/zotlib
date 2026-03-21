@@ -65,7 +65,7 @@ def init():
     # Discover database
     db_path = discover_zotero_database()
     if db_path:
-        console.print(f"[green]Database:[/green] {db_path}")
+        console.print(f"[green]database:[/green] {db_path}")
     else:
         console.print("[red]Could not find Zotero database[/red]")
         raise typer.Exit(1)
@@ -73,7 +73,7 @@ def init():
     # Discover PDFs directory
     pdfs_dir = discover_pdfs_dir(check_exists=False)
     if pdfs_dir:
-        console.print(f"[green]PDFs dir:[/green] {pdfs_dir}")
+        console.print(f"[green]pdfs_dir:[/green] {pdfs_dir}")
         if not pdfs_dir.exists():
             console.print("[yellow]  Path not currently accessible[/yellow]")
     else:
