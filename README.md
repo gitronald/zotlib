@@ -29,6 +29,10 @@ zotlib/
 
 ## Installation
 
+```bash
+uv add zotlib
+```
+
 From source:
 
 ```bash
@@ -37,10 +41,10 @@ cd zotlib
 uv sync
 ```
 
-As a dependency:
+From a specific branch:
 
 ```bash
-uv add git+https://github.com/gitronald/zotlib.git
+uv add git+https://github.com/gitronald/zotlib.git@dev
 ```
 
 ## Configuration
