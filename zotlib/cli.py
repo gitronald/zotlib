@@ -71,9 +71,11 @@ def init():
         raise typer.Exit(1)
 
     # Discover PDFs directory
-    pdfs_dir = discover_pdfs_dir()
+    pdfs_dir = discover_pdfs_dir(check_exists=False)
     if pdfs_dir:
         console.print(f"[green]PDFs dir:[/green] {pdfs_dir}")
+        if not pdfs_dir.exists():
+            console.print("[yellow]  Path not currently accessible[/yellow]")
     else:
         console.print("[yellow]Could not find linked PDFs directory[/yellow]")
 

@@ -61,10 +61,11 @@ def _windows_to_wsl_path(win_path: str) -> Path:
     return Path(f"/mnt/{drive}") / p.relative_to(p.anchor)
 
 
-def discover_pdfs_dir(db_path: Path | None = None) -> Path | None:
+def discover_pdfs_dir(db_path: Path | None = None, check_exists: bool = True) -> Path | None:
     """Discover the linked attachments directory from Zotero preferences.
 
     Reads baseAttachmentPath from prefs.js in the Zotero profile directory.
+    Set check_exists=False to return the path even if not currently accessible.
     """
     user = os.environ.get("USER", "")
 
@@ -90,7 +91,7 @@ def discover_pdfs_dir(db_path: Path | None = None) -> Path | None:
                         path = _windows_to_wsl_path(value)
                     else:
                         path = Path(value)
-                    if path.exists():
+                    if not check_exists or path.exists():
                         return path
 
     return None
