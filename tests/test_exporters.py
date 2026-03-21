@@ -1,4 +1,4 @@
-"""Tests for the export module."""
+"""Tests for the exporters module."""
 
 import json
 
@@ -6,7 +6,7 @@ import fitz
 import polars as pl
 import pytest
 
-from zotlib.export import (
+from zotlib.exporters import (
     ANNOTATION_TYPES,
     _strip_review_prefix,
     bake_annotations,

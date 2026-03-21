@@ -20,7 +20,7 @@ from zotlib.config import (
 )
 from zotlib.covers import generate_covers, generate_thumbnails
 from zotlib.database import ZoteroDatabase
-from zotlib.export import export_collection
+from zotlib.exporters import export_collection
 from zotlib.extractors import (
     extract_collections,
     extract_creators,

@@ -11,7 +11,7 @@ zotlib/
 │   ├── config.py                # Database path discovery
 │   ├── database.py              # SQLite interface
 │   ├── extractors.py            # Data extraction functions
-│   ├── export.py                # Collection export (annotations + PDFs)
+│   ├── exporters.py             # Collection export (annotations + PDFs)
 │   ├── backup.py                # Zotero directory backup
 │   ├── tables.py                # Zotero database table definitions
 │   ├── covers.py                # PDF cover generation
