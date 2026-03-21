@@ -30,7 +30,7 @@ from zotlib.backup import create_backup, default_backup_path
 from zotlib.covers import generate_covers, generate_thumbnails
 from zotlib.formatters.apa import format_cv_as_apa
 from zotlib.export import export_collection
-from zotlib.tables import ALL_SCHEMAS, SCHEMA_MAP
+from zotlib.tables import ALL_SCHEMAS, CORE_SCHEMAS, SCHEMA_MAP
 
 app = typer.Typer(
     name="zotlib",
@@ -146,12 +146,12 @@ def show_tables(
         wide.print(f"[red]Unknown table: {table_name}[/red]")
         wide.print(f"Available: {', '.join(s.name for s in ALL_SCHEMAS)}")
     else:
-        # Show all tables
-        table = Table(title="Zotero Database Schema")
+        # Show core tables used by zotlib
+        table = Table(title="Zotero Database Schema (used by zotlib)")
         table.add_column("Table", style="cyan", no_wrap=True)
         table.add_column("Description", no_wrap=True)
         table.add_column("Columns")
-        for s in ALL_SCHEMAS:
+        for s in CORE_SCHEMAS:
             cols = ", ".join(s.columns.keys())
             if len(cols) > 80:
                 cols = cols[:80].rsplit(", ", 1)[0] + ", ..."

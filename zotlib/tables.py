@@ -22,6 +22,7 @@ class Table:
     name: str
     description: str
     columns: dict[str, Column]
+    core: bool = False
 
 
 # Core item tables
@@ -39,6 +40,7 @@ ITEMS = Table(
         "version": Column("INTEGER", "Sync version number"),
         "synced": Column("INTEGER", "Sync status flag (0 or 1)"),
     },
+    core=True,
 )
 
 ITEM_DATA = Table(
@@ -49,6 +51,7 @@ ITEM_DATA = Table(
         "fieldID": Column("INTEGER", "Foreign key to fieldsCombined"),
         "valueID": Column("INTEGER", "Foreign key to itemDataValues"),
     },
+    core=True,
 )
 
 ITEM_DATA_VALUES = Table(
@@ -58,6 +61,7 @@ ITEM_DATA_VALUES = Table(
         "valueID": Column("INTEGER", "Primary key"),
         "value": Column("TEXT", "The actual field value text"),
     },
+    core=True,
 )
 
 FIELDS_COMBINED = Table(
@@ -70,6 +74,7 @@ FIELDS_COMBINED = Table(
         "fieldFormatID": Column("INTEGER", "Format specification"),
         "custom": Column("INTEGER", "Whether this is a custom field (0 or 1)"),
     },
+    core=True,
 )
 
 ITEM_TYPES = Table(
@@ -81,6 +86,7 @@ ITEM_TYPES = Table(
         "templateItemTypeID": Column("INTEGER", "Template reference"),
         "display": Column("INTEGER", "Display order"),
     },
+    core=True,
 )
 
 # Creator tables
@@ -93,6 +99,7 @@ ITEM_CREATORS = Table(
         "creatorTypeID": Column("INTEGER", "Type of creator (author, editor, etc.)"),
         "orderIndex": Column("INTEGER", "Position in author list"),
     },
+    core=True,
 )
 
 CREATORS = Table(
@@ -104,6 +111,7 @@ CREATORS = Table(
         "lastName": Column("TEXT", "Last name"),
         "fieldMode": Column("INTEGER", "Name format mode (0=two-field, 1=single-field)"),
     },
+    core=True,
 )
 
 # Collection tables
@@ -115,6 +123,7 @@ COLLECTION_ITEMS = Table(
         "itemID": Column("INTEGER", "Foreign key to items"),
         "orderIndex": Column("INTEGER", "Position in collection"),
     },
+    core=True,
 )
 
 COLLECTIONS = Table(
@@ -130,6 +139,7 @@ COLLECTIONS = Table(
         "version": Column("INTEGER", "Sync version number"),
         "synced": Column("INTEGER", "Sync status flag (0 or 1)"),
     },
+    core=True,
 )
 
 # Library tables
@@ -146,6 +156,7 @@ LIBRARIES = Table(
         "lastSync": Column("TIMESTAMP", "Last sync timestamp"),
         "archived": Column("INTEGER", "Archive status (0 or 1)"),
     },
+    core=True,
 )
 
 # Attachment tables
@@ -164,6 +175,7 @@ ITEM_ATTACHMENTS = Table(
         "storageHash": Column("TEXT", "File content hash"),
         "lastProcessedModificationTime": Column("INTEGER", "Last processing timestamp"),
     },
+    core=True,
 )
 
 # Annotation tables
@@ -183,6 +195,7 @@ ITEM_ANNOTATIONS = Table(
         "position": Column("TEXT", "JSON with pageIndex and rects/paths coordinates"),
         "isExternal": Column("INTEGER", "Whether annotation is external (0 or 1)"),
     },
+    core=True,
 )
 
 # Tag tables
@@ -194,6 +207,7 @@ ITEM_TAGS = Table(
         "tagID": Column("INTEGER", "Foreign key to tags"),
         "type": Column("INTEGER", "Tag type (0=manual, 1=automatic)"),
     },
+    core=True,
 )
 
 TAGS = Table(
@@ -203,6 +217,7 @@ TAGS = Table(
         "tagID": Column("INTEGER", "Primary key"),
         "name": Column("TEXT", "Tag display name"),
     },
+    core=True,
 )
 
 # Note tables
@@ -792,6 +807,9 @@ ALL_SCHEMAS = [
     DB_DEBUG1,
 ]
 
+
+# Core schemas (tables used by zotlib)
+CORE_SCHEMAS = [s for s in ALL_SCHEMAS if s.core]
 
 # Lookup by table name
 SCHEMA_MAP = {s.name: s for s in ALL_SCHEMAS}
