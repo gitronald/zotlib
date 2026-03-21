@@ -118,11 +118,13 @@ def show_tables(
         table = Table(title=f"All Tables in {db_path.name}")
         table.add_column("Table", style="cyan", no_wrap=True)
         table.add_column("Description", no_wrap=True)
-        table.add_column("Columns", no_wrap=True)
+        table.add_column("Columns")
         for name in sorted(table_names):
             schema = SCHEMA_MAP.get(name)
             desc = schema.description if schema else ""
             cols = ", ".join(schema.columns.keys()) if schema else ""
+            if len(cols) > 80:
+                cols = cols[:80].rsplit(", ", 1)[0] + ", ..."
             table.add_row(name, desc, cols)
         wide.print(table)
     elif table_name:
@@ -148,9 +150,11 @@ def show_tables(
         table = Table(title="Zotero Database Schema")
         table.add_column("Table", style="cyan", no_wrap=True)
         table.add_column("Description", no_wrap=True)
-        table.add_column("Columns", no_wrap=True)
+        table.add_column("Columns")
         for s in ALL_SCHEMAS:
             cols = ", ".join(s.columns.keys())
+            if len(cols) > 80:
+                cols = cols[:80].rsplit(", ", 1)[0] + ", ..."
             table.add_row(s.name, s.description, cols)
         wide.print(table)
 
