@@ -11,18 +11,16 @@ zotlib/
 │   ├── config.py                # Database path discovery
 │   ├── database.py              # SQLite interface
 │   ├── extractors.py            # Data extraction functions
-│   ├── export.py                # Collection export (annotations + PDFs)
+│   ├── exporters.py             # Collection export (annotations + PDFs)
 │   ├── backup.py                # Zotero directory backup
 │   ├── tables.py                # Zotero database table definitions
 │   ├── covers.py                # PDF cover generation
+│   ├── paths.py                 # Path resolution and filename utilities
 │   └── formatters/apa.py        # APA citation formatter
-├── zotero-js/                   # Zotero JavaScript scripts
-│   ├── extract-annotations.js   # Interactive annotation extractor
-│   ├── extract-annotations-cli.js
-│   ├── extract-annotations-debug.js
-│   ├── create-parents-for-standalone.js
-│   └── run-extract.sh           # Shell wrapper
 ├── scripts/                     # Utility scripts
+│   ├── extract-annotations.js   # Annotation extractor (interactive + headless)
+│   ├── create-parent-item.js    # Create parents for standalone PDFs
+│   ├── run-extract.sh           # Shell wrapper for headless extraction
 │   └── generate_schema_docs.py  # Generate docs/schema.md
 ├── docs/                        # Documentation
 │   └── schema.md                # Database schema reference
@@ -38,11 +36,33 @@ uv sync
 
 ## Configuration
 
-The database path can be configured via:
+Run `zotlib init` to auto-discover Zotero paths and save them to `zotlib.toml`:
 
-1. **CLI flag**: `--database /path/to/zotero.sqlite`
-2. **Environment variable**: `ZOTERO_DATABASE=/path/to/zotero.sqlite`
-3. **Auto-discovery**: Checks common locations (Linux, WSL, macOS)
+```bash
+zotlib init
+```
+
+```
+database: /mnt/c/Users/rer/Zotero/zotero.sqlite
+pdfs_dir: /mnt/i/My Drive/zotero-pdfs
+
+Saved to zotlib.toml
+```
+
+The config file stores the database and linked PDFs directory:
+
+```toml
+[zotlib]
+database = "/path/to/zotero.sqlite"
+pdfs_dir = "/path/to/linked-pdfs"
+```
+
+Path resolution priority (for both database and PDFs dir):
+
+1. **CLI flag**: `--database`, `--pdfs-dir`
+2. **Environment variable**: `ZOTERO_DATABASE`
+3. **Config file**: `zotlib.toml`
+4. **Auto-discovery**: Checks common locations (Linux, WSL, macOS)
 
 ## CLI Commands
 
@@ -119,25 +139,28 @@ apa_output = format_cv_as_apa(items, output_path="output/apa.md")
 
 ## Zotero JavaScript Scripts
 
-Utilities for Zotero's JavaScript console (Tools > Developer > Run JavaScript).
+**WIP** — Utilities for Zotero's JavaScript console (Tools > Developer > Run JavaScript). The Zotero SQLite database should never be modified directly via Python — use these JS scripts (which run through Zotero's API) for any write operations.
 
-### create-parents-for-standalone.js
+### create-parent-item.js
 
 Creates parent document items for standalone PDF attachments in a collection. Useful when PDFs were added directly without metadata — creates a parent item using the filename as the title and re-parents the attachment.
 
 ### extract-annotations.js
 
-Interactive annotation extractor with file save dialog. Select an item, run the script, and save annotations as markdown.
+Extracts annotations from the selected item's PDFs as markdown. Auto-detects its context:
 
-### extract-annotations-cli.js
+- **Interactive** (Tools > Developer > Run JavaScript): shows a file save dialog
+- **Headless** (via HTTP debug API): writes to `~/Desktop/zotero-annotations/`
 
-Headless version that writes to `~/Desktop/zotero-annotations/`. Can be invoked via Zotero's HTTP debug API:
+To run headlessly:
 
 ```bash
-./zotero-js/run-extract.sh
+./scripts/run-extract.sh
 ```
 
 Requires: Settings > Advanced > "Allow other applications to communicate with Zotero"
+
+The shell script should work on macOS where Zotero and the terminal share the same `localhost`. On WSL, the script calls Zotero's debug HTTP endpoint on `127.0.0.1:23119`, but `localhost` does not bridge to the Windows host by default. You may need to use the Windows host IP or run the curl command from PowerShell instead.
 
 ## Annotation Format
 

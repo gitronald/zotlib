@@ -25,7 +25,8 @@ def get_directory_stats(source_dir: Path) -> tuple[int, int]:
             try:
                 total_bytes += filepath.stat().st_size
                 file_count += 1
-            except OSError:
+            except OSError as e:
+                print(f"Warning: skipped {filepath}: {e}")
                 continue
     return file_count, total_bytes
 
@@ -88,7 +89,8 @@ def create_backup(
                         tar.add(filepath, arcname=arcname)
                         archived += 1
                         progress.update(task, completed=archived)
-                    except OSError:
+                    except OSError as e:
+                        progress.console.print(f"[yellow]Warning: skipped {filepath}: {e}[/yellow]")
                         continue
 
     archive_mb = output_path.stat().st_size / (1024 * 1024)

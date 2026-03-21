@@ -28,20 +28,22 @@ def sample_cv_row():
 @pytest.fixture
 def sample_cv_items(sample_cv_row):
     """Sample CV items DataFrame for testing."""
-    return pl.DataFrame([
-        sample_cv_row,
-        {
-            "itemID": 2,
-            "typeName": "conferencePaper",
-            "authors": "Alice Johnson",
-            "title": "Conference Presentation Title",
-            "year": 2022,
-            "publication": "Proceedings of Example Conference",
-            "volume": None,
-            "issue": None,
-            "pages": "50-55",
-            "DOI": None,
-            "url": "https://example.com/paper",
-            "date": date(2022, 3, 10),
-        },
-    ])
+    return pl.DataFrame(
+        [
+            sample_cv_row,
+            {
+                "itemID": 2,
+                "typeName": "conferencePaper",
+                "authors": "Alice Johnson",
+                "title": "Conference Presentation Title",
+                "year": 2022,
+                "publication": "Proceedings of Example Conference",
+                "volume": None,
+                "issue": None,
+                "pages": "50-55",
+                "DOI": None,
+                "url": "https://example.com/paper",
+                "date": date(2022, 3, 10),
+            },
+        ]
+    )

@@ -67,9 +67,7 @@ def format_cv_as_apa(
     items = items.sort("date", descending=True)
 
     # Build references
-    references = [
-        format_apa_reference(row) for row in items.iter_rows(named=True)
-    ]
+    references = [format_apa_reference(row) for row in items.iter_rows(named=True)]
     items = items.with_columns(pl.Series("reference", references))
 
     output_lines = []

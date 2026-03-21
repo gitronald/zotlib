@@ -16,6 +16,7 @@ build/
 
 # Testing
 .pytest_cache
+.coverage
 
 # Data/output
 data

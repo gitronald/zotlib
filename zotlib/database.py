@@ -1,9 +1,9 @@
 """Database connection and query utilities for Zotero SQLite."""
 
 import sqlite3
-from pathlib import Path
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Iterator
+from pathlib import Path
 
 import polars as pl
 
@@ -22,9 +22,7 @@ class ZoteroDatabase:
         """
         self.database_path = Path(database_path)
         if not self.database_path.exists():
-            raise FileNotFoundError(
-                f"Zotero database not found: {self.database_path}"
-            )
+            raise FileNotFoundError(f"Zotero database not found: {self.database_path}")
 
     @contextmanager
     def connection(self) -> Iterator[sqlite3.Connection]:
@@ -51,20 +49,19 @@ class ZoteroDatabase:
             cursor.execute(f"SELECT * FROM {table_name} LIMIT 0")
             return [desc[0] for desc in cursor.description]
 
-    def query(self, sql: str) -> pl.DataFrame:
+    def query(self, sql: str, params: list | tuple | None = None) -> pl.DataFrame:
         """Execute a query and return results as DataFrame.
 
         Args:
             sql: SQL query string.
+            params: Optional query parameters for ? placeholders.
 
         Returns:
             DataFrame with query results.
         """
         with self.connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(sql)
+            cursor.execute(sql, params or [])
             columns = [desc[0] for desc in cursor.description]
             rows = cursor.fetchall()
-            return pl.DataFrame(
-                {col: [row[i] for row in rows] for i, col in enumerate(columns)}
-            )
+            return pl.DataFrame({col: [row[i] for row in rows] for i, col in enumerate(columns)})

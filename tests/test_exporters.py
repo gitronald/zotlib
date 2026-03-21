@@ -1,15 +1,13 @@
-"""Tests for the export module."""
+"""Tests for the exporters module."""
 
 import json
-from pathlib import Path
 
 import fitz
 import polars as pl
 import pytest
 
-from zotlib.export import (
+from zotlib.exporters import (
     ANNOTATION_TYPES,
-    COLOR_LABELS,
     _strip_review_prefix,
     bake_annotations,
     convert_zotero_rect,
@@ -18,7 +16,6 @@ from zotlib.export import (
     hex_to_rgb,
     make_item_dirname,
 )
-
 
 # --- Fixtures ---
 
@@ -42,44 +39,46 @@ def sample_item_row():
 @pytest.fixture
 def sample_annotations():
     """Sample annotation rows for testing."""
-    return pl.DataFrame([
-        {
-            "itemID": 100,
-            "parentItemID": 50,
-            "type": 1,  # highlight
-            "text": "This is a highlighted passage",
-            "comment": "Important finding",
-            "color": "#ffd400",
-            "pageLabel": "3",
-            "sortIndex": "00003|000100|00200",
-            "position": json.dumps({"pageIndex": 2, "rects": [[100, 200, 400, 220]]}),
-            "paperItemID": 42,
-        },
-        {
-            "itemID": 101,
-            "parentItemID": 50,
-            "type": 2,  # note
-            "text": "",
-            "comment": "Remember to follow up on this method",
-            "color": "#ffd400",
-            "pageLabel": "3",
-            "sortIndex": "00003|000200|00300",
-            "position": json.dumps({"pageIndex": 2, "rects": [[100, 300, 400, 320]]}),
-            "paperItemID": 42,
-        },
-        {
-            "itemID": 102,
-            "parentItemID": 50,
-            "type": 1,  # highlight
-            "text": "Another key finding on page five",
-            "comment": "",
-            "color": "#ff6666",
-            "pageLabel": "5",
-            "sortIndex": "00005|000100|00100",
-            "position": json.dumps({"pageIndex": 4, "rects": [[50, 400, 500, 420]]}),
-            "paperItemID": 42,
-        },
-    ])
+    return pl.DataFrame(
+        [
+            {
+                "itemID": 100,
+                "parentItemID": 50,
+                "type": 1,  # highlight
+                "text": "This is a highlighted passage",
+                "comment": "Important finding",
+                "color": "#ffd400",
+                "pageLabel": "3",
+                "sortIndex": "00003|000100|00200",
+                "position": json.dumps({"pageIndex": 2, "rects": [[100, 200, 400, 220]]}),
+                "paperItemID": 42,
+            },
+            {
+                "itemID": 101,
+                "parentItemID": 50,
+                "type": 2,  # note
+                "text": "",
+                "comment": "Remember to follow up on this method",
+                "color": "#ffd400",
+                "pageLabel": "3",
+                "sortIndex": "00003|000200|00300",
+                "position": json.dumps({"pageIndex": 2, "rects": [[100, 300, 400, 320]]}),
+                "paperItemID": 42,
+            },
+            {
+                "itemID": 102,
+                "parentItemID": 50,
+                "type": 1,  # highlight
+                "text": "Another key finding on page five",
+                "comment": "",
+                "color": "#ff6666",
+                "pageLabel": "5",
+                "sortIndex": "00005|000100|00100",
+                "position": json.dumps({"pageIndex": 4, "rects": [[50, 400, 500, 420]]}),
+                "paperItemID": 42,
+            },
+        ]
+    )
 
 
 @pytest.fixture
@@ -235,7 +234,7 @@ class TestFormatAnnotationsMarkdown:
 class TestBakeAnnotations:
     def test_highlight_baked(self, simple_pdf, sample_annotations, tmp_path):
         output_pdf = tmp_path / "output.pdf"
-        warnings = bake_annotations(simple_pdf, sample_annotations, output_pdf)
+        bake_annotations(simple_pdf, sample_annotations, output_pdf)
         assert output_pdf.exists()
 
         doc = fitz.open(str(output_pdf))
@@ -273,29 +272,37 @@ class TestBakeAnnotations:
         assert warnings == []
 
     def test_bad_position_json(self, simple_pdf, tmp_path):
-        bad_ann = pl.DataFrame([{
-            "itemID": 200,
-            "type": 1,
-            "text": "test",
-            "comment": "",
-            "color": "#ffd400",
-            "position": "not valid json",
-            "paperItemID": 42,
-        }])
+        bad_ann = pl.DataFrame(
+            [
+                {
+                    "itemID": 200,
+                    "type": 1,
+                    "text": "test",
+                    "comment": "",
+                    "color": "#ffd400",
+                    "position": "not valid json",
+                    "paperItemID": 42,
+                }
+            ]
+        )
         output_pdf = tmp_path / "output.pdf"
         warnings = bake_annotations(simple_pdf, bad_ann, output_pdf)
         assert any("Bad position JSON" in w for w in warnings)
 
     def test_page_out_of_range(self, simple_pdf, tmp_path):
-        ann = pl.DataFrame([{
-            "itemID": 201,
-            "type": 1,
-            "text": "test",
-            "comment": "",
-            "color": "#ffd400",
-            "position": json.dumps({"pageIndex": 99, "rects": [[100, 200, 300, 220]]}),
-            "paperItemID": 42,
-        }])
+        ann = pl.DataFrame(
+            [
+                {
+                    "itemID": 201,
+                    "type": 1,
+                    "text": "test",
+                    "comment": "",
+                    "color": "#ffd400",
+                    "position": json.dumps({"pageIndex": 99, "rects": [[100, 200, 300, 220]]}),
+                    "paperItemID": 42,
+                }
+            ]
+        )
         output_pdf = tmp_path / "output.pdf"
         warnings = bake_annotations(simple_pdf, ann, output_pdf)
         assert any("out of range" in w for w in warnings)

@@ -1,52 +1,13 @@
 """Generate cover images from first page of PDFs in a Zotero collection."""
 
-import re
-from pathlib import Path, PureWindowsPath
+from pathlib import Path
 
 import fitz
 import polars as pl
 
 from zotlib.database import ZoteroDatabase
 from zotlib.extractors import extract_attachments, extract_collections, extract_items
-
-
-def resolve_pdf_path(
-    storage_dir: Path,
-    key: str,
-    path_field: str,
-    base_dir: Path | None = None,
-) -> Path:
-    """Resolve actual filesystem path from Zotero attachment record.
-
-    Zotero uses three path formats:
-    - 'storage:filename.pdf' -> {storage_dir}/{key}/{filename}
-    - 'attachments:relative/path.pdf' -> {base_dir}/{relative/path}
-    - Absolute Windows path -> converted to WSL /mnt/ path
-    """
-    if path_field.startswith("storage:"):
-        filename = path_field.removeprefix("storage:")
-        return storage_dir / key / filename
-
-    if path_field.startswith("attachments:"):
-        if base_dir is None:
-            raise ValueError(
-                "Linked attachment found but no --pdfs-dir provided. "
-                "Set the directory for linked PDF attachments."
-            )
-        relative = path_field.removeprefix("attachments:")
-        return base_dir / relative
-
-    # Absolute Windows path (e.g., D:\Dropbox\lit\file.pdf)
-    win_path = PureWindowsPath(path_field)
-    drive = win_path.drive.rstrip(":").lower()
-    return Path(f"/mnt/{drive}") / win_path.relative_to(win_path.anchor)
-
-
-def sanitize_filename(name: str) -> str:
-    """Sanitize a string for use as a filename."""
-    name = re.sub(r'[<>:"/\\|?*]', "", name)
-    name = name.strip(". ")
-    return name[:200] if name else "untitled"
+from zotlib.paths import resolve_pdf_path
 
 
 def render_first_page(pdf_path: Path, output_path: Path, dpi: int = 300) -> None:
@@ -98,7 +59,7 @@ def generate_covers(
     collection_name: str,
     output_dir: Path,
     dpi: int = 300,
-    base_dir: Path | None = None,
+    pdfs_dir: Path | None = None,
 ) -> tuple[dict[int, Path], list[str]]:
     """Generate first-page cover images for all PDFs in a collection.
 
@@ -119,10 +80,12 @@ def generate_covers(
     # Get all items for titles
     items = extract_items(db)
     items_in_collection = items.filter(pl.col("itemID").is_in(list(item_ids)))
-    title_map = dict(zip(
-        items_in_collection["itemID"].to_list(),
-        items_in_collection["title"].to_list(),
-    ))
+    title_map = dict(
+        zip(
+            items_in_collection["itemID"].to_list(),
+            items_in_collection["title"].to_list(),
+        )
+    )
 
     # Get PDF attachments
     attachments = extract_attachments(db)
@@ -137,9 +100,7 @@ def generate_covers(
         parent_id = row["parentItemID"]
         title = title_map.get(parent_id, f"item_{parent_id}")
 
-        pdf_path = resolve_pdf_path(
-            storage_dir, row["key"], row["path"], base_dir=base_dir
-        )
+        pdf_path = resolve_pdf_path(storage_dir, row["key"], row["path"], pdfs_dir=pdfs_dir)
         if not pdf_path.exists():
             skipped.append(f"{title} ({pdf_path})")
             continue

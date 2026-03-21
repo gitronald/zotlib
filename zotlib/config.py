@@ -3,6 +3,27 @@
 import os
 from pathlib import Path
 
+CONFIG_FILE = "zotlib.toml"
+
+
+def load_config() -> dict:
+    """Load configuration from zotlib.toml if it exists.
+
+    Returns a dict with keys like 'database', 'pdfs_dir' or empty dict.
+    """
+    config_path = Path(CONFIG_FILE)
+    if not config_path.exists():
+        return {}
+
+    try:
+        import tomllib
+    except ModuleNotFoundError:
+        import tomli as tomllib
+
+    text = config_path.read_text()
+    data = tomllib.loads(text)
+    return data.get("zotlib", {})
+
 
 def discover_zotero_database() -> Path | None:
     """Attempt to auto-discover Zotero database location.
@@ -33,17 +54,19 @@ def discover_zotero_database() -> Path | None:
 
 
 def _windows_to_wsl_path(win_path: str) -> Path:
-    """Convert a Windows path like 'I:\\My Drive\\zotero-pdfs' to WSL '/mnt/i/My Drive/zotero-pdfs'."""
+    """Convert a Windows path to a WSL /mnt/ path."""
     from pathlib import PureWindowsPath
+
     p = PureWindowsPath(win_path)
     drive = p.drive.rstrip(":").lower()
     return Path(f"/mnt/{drive}") / p.relative_to(p.anchor)
 
 
-def discover_pdfs_dir(db_path: Path | None = None) -> Path | None:
+def discover_pdfs_dir(check_exists: bool = True) -> Path | None:
     """Discover the linked attachments directory from Zotero preferences.
 
     Reads baseAttachmentPath from prefs.js in the Zotero profile directory.
+    Set check_exists=False to return the path even if not currently accessible.
     """
     user = os.environ.get("USER", "")
 
@@ -69,7 +92,7 @@ def discover_pdfs_dir(db_path: Path | None = None) -> Path | None:
                         path = _windows_to_wsl_path(value)
                     else:
                         path = Path(value)
-                    if path.exists():
+                    if not check_exists or path.exists():
                         return path
 
     return None
@@ -79,9 +102,10 @@ def get_database_path(explicit_path: Path | str | None = None) -> Path:
     """Get the Zotero database path.
 
     Priority order:
-    1. Explicit path argument
+    1. Explicit path argument (CLI flag)
     2. ZOTERO_DATABASE environment variable
-    3. Auto-discovered location
+    3. zotlib.toml config file
+    4. Auto-discovery
 
     Raises:
         FileNotFoundError: If no database can be found.
@@ -99,9 +123,14 @@ def get_database_path(explicit_path: Path | str | None = None) -> Path:
         path = Path(env_path)
         if path.exists():
             return path
-        raise FileNotFoundError(
-            f"ZOTERO_DATABASE path does not exist: {path}"
-        )
+        raise FileNotFoundError(f"ZOTERO_DATABASE path does not exist: {path}")
+
+    # Check config file
+    config = load_config()
+    if "database" in config:
+        path = Path(config["database"])
+        if path.exists():
+            return path
 
     # Try auto-discovery
     discovered = discover_zotero_database()
@@ -110,5 +139,46 @@ def get_database_path(explicit_path: Path | str | None = None) -> Path:
 
     raise FileNotFoundError(
         "Could not find Zotero database. "
-        "Set ZOTERO_DATABASE environment variable or use --database flag."
+        "Run 'zotlib init', set ZOTERO_DATABASE, or use --database flag."
     )
+
+
+def get_pdfs_dir(explicit_path: Path | str | None = None) -> Path | None:
+    """Get the linked PDFs directory.
+
+    Priority order:
+    1. Explicit path argument (CLI flag)
+    2. zotlib.toml config file
+    3. Auto-discovery from Zotero preferences
+
+    Returns None if no directory can be found.
+    """
+    if explicit_path:
+        path = Path(explicit_path)
+        if path.exists():
+            return path
+        return None
+
+    # Check config file
+    config = load_config()
+    if "pdfs_dir" in config:
+        path = Path(config["pdfs_dir"])
+        if path.exists():
+            return path
+
+    # Try auto-discovery
+    return discover_pdfs_dir()
+
+
+def write_config(database: Path, pdfs_dir: Path | None = None) -> Path:
+    """Write configuration to zotlib.toml.
+
+    Returns the path to the config file.
+    """
+    config_path = Path(CONFIG_FILE)
+    lines = ["[zotlib]", f'database = "{database}"']
+    if pdfs_dir:
+        lines.append(f'pdfs_dir = "{pdfs_dir}"')
+    lines.append("")  # trailing newline
+    config_path.write_text("\n".join(lines))
+    return config_path
