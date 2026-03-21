@@ -9,7 +9,15 @@ from rich.table import Table
 
 import polars as pl
 
-from zotlib.config import get_database_path, discover_pdfs_dir
+from zotlib.config import (
+    get_database_path,
+    get_pdfs_dir,
+    discover_zotero_database,
+    discover_pdfs_dir,
+    write_config,
+    load_config,
+    CONFIG_FILE,
+)
 from zotlib.database import ZoteroDatabase
 from zotlib.extractors import (
     extract_items,
@@ -29,6 +37,49 @@ app = typer.Typer(
     help="Extract and format bibliographic data from Zotero databases.",
 )
 console = Console()
+
+
+# --- Init ---
+
+
+@app.command()
+def init():
+    """Discover Zotero paths and save to zotlib.toml.
+
+    Auto-discovers the Zotero database and linked PDFs directory,
+    then writes them to a config file for future use.
+
+    Examples:
+        zotlib init
+    """
+    # Check for existing config
+    existing = load_config()
+    if existing:
+        console.print(f"[yellow]Existing {CONFIG_FILE}:[/yellow]")
+        for key, value in existing.items():
+            console.print(f"  {key} = {value}")
+        overwrite = typer.confirm("Overwrite?", default=False)
+        if not overwrite:
+            raise typer.Abort()
+
+    # Discover database
+    db_path = discover_zotero_database()
+    if db_path:
+        console.print(f"[green]Database:[/green] {db_path}")
+    else:
+        console.print("[red]Could not find Zotero database[/red]")
+        raise typer.Exit(1)
+
+    # Discover PDFs directory
+    pdfs_dir = discover_pdfs_dir()
+    if pdfs_dir:
+        console.print(f"[green]PDFs dir:[/green] {pdfs_dir}")
+    else:
+        console.print("[yellow]Could not find linked PDFs directory[/yellow]")
+
+    # Write config
+    config_path = write_config(db_path, pdfs_dir)
+    console.print(f"\nSaved to {config_path}")
 
 
 # --- Explore ---
@@ -172,7 +223,7 @@ def export_annotations(
 
     db = ZoteroDatabase(db_path)
     if base_dir is None:
-        base_dir = discover_pdfs_dir()
+        base_dir = get_pdfs_dir()
         if base_dir:
             console.print(f"Using linked PDFs directory: {base_dir}")
     collection_dir = output_dir / collection
@@ -270,7 +321,7 @@ def export_covers(
 
     db = ZoteroDatabase(db_path)
     if base_dir is None:
-        base_dir = discover_pdfs_dir()
+        base_dir = get_pdfs_dir()
         if base_dir:
             console.print(f"Using linked PDFs directory: {base_dir}")
     fullsize_dir = output_dir / collection / "fullsize"
