@@ -16,13 +16,10 @@ zotlib/
 │   ├── tables.py                # Zotero database table definitions
 │   ├── covers.py                # PDF cover generation
 │   └── formatters/apa.py        # APA citation formatter
-├── zotero-js/                   # Zotero JavaScript scripts
-│   ├── extract-annotations.js   # Interactive annotation extractor
-│   ├── extract-annotations-cli.js
-│   ├── extract-annotations-debug.js
-│   ├── create-parents-for-standalone.js
-│   └── run-extract.sh           # Shell wrapper
 ├── scripts/                     # Utility scripts
+│   ├── extract-annotations.js   # Annotation extractor (interactive + headless)
+│   ├── create-parents-for-standalone.js
+│   ├── run-extract.sh           # Shell wrapper for headless extraction
 │   └── generate_schema_docs.py  # Generate docs/schema.md
 ├── docs/                        # Documentation
 │   └── schema.md                # Database schema reference
@@ -141,7 +138,7 @@ apa_output = format_cv_as_apa(items, output_path="output/apa.md")
 
 ## Zotero JavaScript Scripts
 
-Utilities for Zotero's JavaScript console (Tools > Developer > Run JavaScript).
+**WIP** — Utilities for Zotero's JavaScript console (Tools > Developer > Run JavaScript). The Zotero SQLite database should never be modified directly via Python — use these JS scripts (which run through Zotero's API) for any write operations.
 
 ### create-parents-for-standalone.js
 
@@ -149,17 +146,20 @@ Creates parent document items for standalone PDF attachments in a collection. Us
 
 ### extract-annotations.js
 
-Interactive annotation extractor with file save dialog. Select an item, run the script, and save annotations as markdown.
+Extracts annotations from the selected item's PDFs as markdown. Auto-detects its context:
 
-### extract-annotations-cli.js
+- **Interactive** (Tools > Developer > Run JavaScript): shows a file save dialog
+- **Headless** (via HTTP debug API): writes to `~/Desktop/zotero-annotations/`
 
-Headless version that writes to `~/Desktop/zotero-annotations/`. Can be invoked via Zotero's HTTP debug API:
+To run headlessly:
 
 ```bash
-./zotero-js/run-extract.sh
+./scripts/run-extract.sh
 ```
 
 Requires: Settings > Advanced > "Allow other applications to communicate with Zotero"
+
+The shell script should work on macOS where Zotero and the terminal share the same `localhost`. On WSL, the script calls Zotero's debug HTTP endpoint on `127.0.0.1:23119`, but `localhost` does not bridge to the Windows host by default. You may need to use the Windows host IP or run the curl command from PowerShell instead.
 
 ## Annotation Format
 

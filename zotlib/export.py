@@ -30,7 +30,7 @@ ANNOTATION_TYPES = {
     6: "text",
 }
 
-# Zotero hex colors to readable labels (matches zotero-js/extract-annotations.js)
+# Zotero hex colors to readable labels (matches scripts/extract-annotations.js)
 COLOR_LABELS = {
     "#ffd400": "yellow",
     "#ffff00": "yellow",

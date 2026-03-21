@@ -7,7 +7,7 @@
 # 3. Select an item in Zotero before running this script
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT_FILE="$SCRIPT_DIR/extract-annotations-cli.js"
+SCRIPT_FILE="$SCRIPT_DIR/extract-annotations.js"
 
 if [ ! -f "$SCRIPT_FILE" ]; then
     echo "Error: Script not found at $SCRIPT_FILE"

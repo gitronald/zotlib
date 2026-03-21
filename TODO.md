@@ -1,6 +1,7 @@
 # TODO
 
-- [ ] Reorganize `zotero-js/` folder into `scripts/` (no plan)
+- [ ] Test JS scripts across Windows/macOS and experiment with record modification (no plan)
+- [x] Reorganize `zotero-js/` folder into `scripts/` ([plan](.claude/plans/011-reorganize-zotero-js.md))
 - [x] Add descriptions and columns for remaining tables in `show-tables --all` (no plan)
 - [x] Add `zotlib init` command with `zotlib.toml` config ([plan](.claude/plans/010-init-command.md))
 - [x] Restructure CLI commands with export-* naming ([plan](.claude/plans/009-restructure-cli-commands.md))

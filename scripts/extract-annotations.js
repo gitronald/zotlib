@@ -1,9 +1,14 @@
 /**
  * Zotero 7 Script: Extract Annotations to Markdown
  *
- * Usage: Select an item in Zotero, then run this script in
- * Tools > Developer > Run JavaScript
+ * Modes:
+ *   Interactive - Run in Tools > Developer > Run JavaScript (shows save dialog)
+ *   Headless    - Invoke via HTTP debug API (writes to OUTPUT_DIR)
+ *
+ * Select an item in Zotero before running.
  */
+
+var OUTPUT_DIR = Zotero.Profile.dir.replace(/[^/]+$/, '') + 'Desktop/zotero-annotations/';
 
 var zoteroPane = Zotero.getActiveZoteroPane();
 var selectedItems = zoteroPane.getSelectedItems();
@@ -13,7 +18,7 @@ if (selectedItems.length === 0) {
 } else if (selectedItems.length > 1) {
     "ERROR: Please select only one item.";
 } else {
-    (function() {
+    (async function() {
         var item = selectedItems[0];
         var parentItem = item.isAttachment() ? Zotero.Items.get(item.parentItemID) : item;
 
@@ -34,12 +39,12 @@ if (selectedItems.length === 0) {
 
         // Collect all annotations from all PDFs
         var allAnnotations = [];
+        var debugInfo = [];
         for (var i = 0; i < pdfAttachments.length; i++) {
             var annData = pdfAttachments[i].getAnnotations();
-            // getAnnotations() returns annotation objects directly
+            debugInfo.push(pdfAttachments[i].attachmentFilename + ': ' + annData.length + ' annotations');
             for (var j = 0; j < annData.length; j++) {
                 var ann = annData[j];
-                // Handle both object and JSON string formats
                 if (typeof ann === 'string') {
                     ann = JSON.parse(ann);
                 }
@@ -48,7 +53,7 @@ if (selectedItems.length === 0) {
         }
 
         if (allAnnotations.length === 0) {
-            return "ERROR: No annotations found in the PDF.";
+            return "ERROR: No annotations found.\n" + debugInfo.join('\n');
         }
 
         // Sort by page then position
@@ -58,7 +63,6 @@ if (selectedItems.length === 0) {
             var pageA = posA.pageIndex || 0;
             var pageB = posB.pageIndex || 0;
             if (pageA !== pageB) return pageA - pageB;
-            // Use sortIndex if available
             var sortA = a.annotationSortIndex || '';
             var sortB = b.annotationSortIndex || '';
             return sortA.localeCompare(sortB);
@@ -84,7 +88,6 @@ if (selectedItems.length === 0) {
         markdown.push('---');
         markdown.push('');
 
-        // Process annotations
         var currentPage = -1;
 
         function getColorLabel(color) {
@@ -109,14 +112,12 @@ if (selectedItems.length === 0) {
             var position = typeof ann.annotationPosition === 'string' ? JSON.parse(ann.annotationPosition) : (ann.annotationPosition || {});
             var page = (position.pageIndex || 0) + 1;
 
-            // Page header
             if (page !== currentPage) {
                 currentPage = page;
                 markdown.push('## Page ' + page);
                 markdown.push('');
             }
 
-            // Format by type
             if (type === 'highlight') {
                 var colorLabel = getColorLabel(color);
                 markdown.push(colorLabel + ' **Highlight:**');
@@ -153,25 +154,36 @@ if (selectedItems.length === 0) {
 
         var markdownContent = markdown.join('\n');
 
-        // Save file
-        var fp = new FilePicker();
-        fp.init(window, "Save Annotations as Markdown", fp.modeSave);
-        fp.appendFilters(fp.filterAll);
-        var safeTitle = title.replace(/[<>:"/\\|?*]/g, '_');
-        fp.defaultString = safeTitle + '_annotations.md';
+        // Save: use file dialog if available (interactive), otherwise auto-save (headless)
+        var safeTitle = title.replace(/[<>:"/\\|?*]/g, '_').substring(0, 100);
+        var isInteractive = typeof window !== 'undefined' && typeof FilePicker !== 'undefined';
 
-        fp.show().then(function(result) {
+        if (isInteractive) {
+            var fp = new FilePicker();
+            fp.init(window, "Save Annotations as Markdown", fp.modeSave);
+            fp.appendFilters(fp.filterAll);
+            fp.defaultString = safeTitle + '_annotations.md';
+
+            var result = await fp.show();
             if (result === fp.returnOK || result === fp.returnReplace) {
                 var outputPath = fp.file;
                 if (!outputPath.endsWith('.md')) {
                     outputPath += '.md';
                 }
-                Zotero.File.putContentsAsync(outputPath, markdownContent).then(function() {
-                    alert('Annotations saved to:\n' + outputPath);
-                });
+                await Zotero.File.putContentsAsync(outputPath, markdownContent);
+                return "Saved " + allAnnotations.length + " annotations to: " + outputPath;
             }
-        });
-
-        return "Processing " + allAnnotations.length + " annotations...";
+            return "Save cancelled.";
+        } else {
+            var dir = Zotero.File.pathToFile(OUTPUT_DIR);
+            if (!dir.exists()) {
+                dir.create(Components.interfaces.nsIFile.DIRECTORY_TYPE, 0o755);
+            }
+            var timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+            var filename = safeTitle + '_' + timestamp + '.md';
+            var outputPath = OUTPUT_DIR + filename;
+            await Zotero.File.putContentsAsync(outputPath, markdownContent);
+            return "Saved " + allAnnotations.length + " annotations to: " + outputPath + "\n" + debugInfo.join('\n');
+        }
     })();
 }
