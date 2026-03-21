@@ -1,8 +1,8 @@
 # zotlib
 
-Tools for extracting and formatting bibliographic data from Zotero databases.
+Tools for extracting and formatting bibliographic data from Zotero 8 databases.
 
-Reads directly from Zotero's local SQLite database — no API key needed. Export collections as CSV or APA-formatted references, generate PDF cover images with thumbnails, and extract annotated PDFs with baked-in highlights and markdown notes. Includes a CLI for common workflows and a Python API for custom pipelines.
+Reads directly from Zotero's local SQLite database — no API key needed. Export collections as CSV or APA-formatted references, generate PDF cover images with thumbnails, and extract annotated PDFs with baked-in highlights and markdown notes. Includes a CLI for common workflows and a Python API for custom pipelines. Built for Zotero 8; older versions are untested and likely incompatible due to schema differences.
 
 ## Project Structure
 
@@ -29,6 +29,10 @@ zotlib/
 
 ## Installation
 
+```bash
+uv add zotlib
+```
+
 From source:
 
 ```bash
@@ -37,10 +41,10 @@ cd zotlib
 uv sync
 ```
 
-As a dependency:
+From a specific branch:
 
 ```bash
-uv add git+https://github.com/gitronald/zotlib.git
+uv add git+https://github.com/gitronald/zotlib.git@dev
 ```
 
 ## Configuration
