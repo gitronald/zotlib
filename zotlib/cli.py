@@ -196,6 +196,10 @@ def show_collections(
 
 @app.command("export-annotations")
 def export_annotations(
+    collection: Annotated[
+        str,
+        typer.Option("--collection", "-c", help="Collection name"),
+    ],
     database: Annotated[
         Path | None,
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
@@ -204,10 +208,6 @@ def export_annotations(
         Path,
         typer.Option("--output", "-o", help="Output directory"),
     ] = Path("output/export-annotations"),
-    collection: Annotated[
-        str,
-        typer.Option("--collection", "-c", help="Collection name"),
-    ] = ...,
     pdfs_dir: Annotated[
         Path | None,
         typer.Option("--pdfs-dir", "-p", help="Directory for linked PDF attachments"),
@@ -249,6 +249,10 @@ def export_annotations(
 
 @app.command("export-apa")
 def export_apa(
+    collection: Annotated[
+        str,
+        typer.Option("--collection", "-c", help="Collection name"),
+    ],
     database: Annotated[
         Path | None,
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
@@ -257,10 +261,6 @@ def export_apa(
         Path,
         typer.Option("--output", "-o", help="Output directory"),
     ] = Path("output/export-apa"),
-    collection: Annotated[
-        str,
-        typer.Option("--collection", "-c", help="Collection name"),
-    ] = ...,
     group_by: Annotated[
         str,
         typer.Option("--group-by", "-g", help="Column to group references by"),
@@ -286,6 +286,10 @@ def export_apa(
 
 @app.command("export-covers")
 def export_covers(
+    collection: Annotated[
+        str,
+        typer.Option("--collection", "-c", help="Collection name"),
+    ],
     database: Annotated[
         Path | None,
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
@@ -294,10 +298,6 @@ def export_covers(
         Path,
         typer.Option("--output", "-o", help="Output directory"),
     ] = Path("output/export-covers"),
-    collection: Annotated[
-        str,
-        typer.Option("--collection", "-c", help="Collection name"),
-    ] = ...,
     pdfs_dir: Annotated[
         Path | None,
         typer.Option("--pdfs-dir", "-p", help="Directory for linked PDF attachments"),
