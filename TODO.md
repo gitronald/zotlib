@@ -1,5 +1,6 @@
 # TODO
 
+- [ ] Code review cleanup: naming, SQL params, dead code, tests ([plan](.claude/plans/012-code-review-cleanup.md))
 - [ ] Test JS scripts across Windows/macOS and experiment with record modification (no plan)
 - [x] Reorganize `zotero-js/` folder into `scripts/` ([plan](.claude/plans/011-reorganize-zotero-js.md))
 - [x] Add descriptions and columns for remaining tables in `show-tables --all` (no plan)
