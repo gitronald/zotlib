@@ -2,6 +2,8 @@
 
 Tools for extracting and formatting bibliographic data from Zotero databases.
 
+Reads directly from Zotero's local SQLite database — no API key needed. Export collections as CSV or APA-formatted references, generate PDF cover images with thumbnails, and extract annotated PDFs with baked-in highlights and markdown notes. Includes a CLI for common workflows and a Python API for custom pipelines.
+
 ## Project Structure
 
 ```
@@ -20,18 +22,25 @@ zotlib/
 ├── scripts/                     # Utility scripts
 │   ├── extract-annotations.js   # Annotation extractor (interactive + headless)
 │   ├── create-parent-item.js    # Create parents for standalone PDFs
-│   ├── run-extract.sh           # Shell wrapper for headless extraction
-│   └── generate_schema_docs.py  # Generate docs/schema.md
-├── docs/                        # Documentation
-│   └── schema.md                # Database schema reference
+│   └── run-extract.sh           # Shell wrapper for headless extraction
 ├── tests/                       # Test suite
 └── pyproject.toml               # Project configuration
 ```
 
 ## Installation
 
+From source:
+
 ```bash
+git clone https://github.com/gitronald/zotlib.git
+cd zotlib
 uv sync
+```
+
+As a dependency:
+
+```bash
+uv add git+https://github.com/gitronald/zotlib.git
 ```
 
 ## Configuration
@@ -66,7 +75,22 @@ Path resolution priority (for both database and PDFs dir):
 
 ## CLI Commands
 
-### Export data
+### Explore
+
+Browse collections and inspect database schema. The `show-tables` command documents Zotero's largely undocumented SQLite table structure, including column descriptions and types.
+
+```bash
+# List available collections
+zotlib show-collections
+
+# Show database tables
+zotlib show-tables
+zotlib show-tables items
+```
+
+### Export
+
+Export collection data in multiple formats. Supports linked attachments via `--pdfs-dir` for PDFs stored outside Zotero's default storage.
 
 ```bash
 # Export all tables as CSV
@@ -80,25 +104,18 @@ zotlib export-apa -c publications
 
 # Generate cover images and thumbnails
 zotlib export-covers -c publications
-zotlib export-covers -c publications -p "/path/to/linked-pdfs/"
 
 # Export annotated PDFs and markdown notes
 zotlib export-annotations -c mycollection
-zotlib export-annotations -c mycollection -p "/path/to/linked-pdfs/"
 ```
 
-### Explore and manage
+### Backup
+
+Archive the entire Zotero data directory as a compressed `.tar.bz2` file with a progress bar. Saves to `data/backups/zotero-YYYY-MM-DD.tar.bz2` by default. Use `-o` to specify a custom output path or `-d` to point to a different database.
 
 ```bash
-# List available collections
-zotlib show-collections
-
-# Show database tables
-zotlib show-tables
-zotlib show-tables items
-
-# Back up the Zotero data directory
 zotlib backup
+zotlib backup -o ~/backups/zotero-2026-03-21.tar.bz2
 ```
 
 ### Output structure
