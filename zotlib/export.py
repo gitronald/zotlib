@@ -10,15 +10,14 @@ import polars as pl
 from zotlib.covers import resolve_pdf_path, sanitize_filename
 from zotlib.database import ZoteroDatabase
 from zotlib.extractors import (
+    _add_authors,
+    _clean_items,
     extract_attachments,
     extract_collections,
     extract_creators,
     extract_items,
     extract_tags,
-    _clean_items,
-    _add_authors,
 )
-
 
 # Zotero annotation type integers to names
 ANNOTATION_TYPES = {
@@ -68,9 +67,7 @@ def hex_to_rgb(color: str) -> tuple[float, float, float]:
     return (r / 255, g / 255, b / 255)
 
 
-def convert_zotero_rect(
-    rect: list[float], page_height: float
-) -> fitz.Rect:
+def convert_zotero_rect(rect: list[float], page_height: float) -> fitz.Rect:
     """Convert a Zotero rect to a PyMuPDF rect.
 
     Zotero stores rects as [x0, y0, x1, y1] in PDF coordinates (bottom-left
@@ -115,10 +112,7 @@ def get_collection_items(
     coll_items = _add_authors(coll_items, creators)
 
     # Add tags (comma-separated)
-    item_tags = (
-        tags.group_by("itemID")
-        .agg(pl.col("name").sort().str.join(", ").alias("tags"))
-    )
+    item_tags = tags.group_by("itemID").agg(pl.col("name").sort().str.join(", ").alias("tags"))
     coll_items = coll_items.join(item_tags, on="itemID", how="left")
 
     # Clean dates
@@ -162,9 +156,7 @@ def get_standalone_attachments(
         cursor.execute(query, [collection_name])
         columns = [desc[0] for desc in cursor.description]
         rows = cursor.fetchall()
-        return pl.DataFrame(
-            {col: [row[i] for row in rows] for i, col in enumerate(columns)}
-        )
+        return pl.DataFrame({col: [row[i] for row in rows] for i, col in enumerate(columns)})
 
 
 def get_item_annotations(
@@ -183,15 +175,15 @@ def get_item_annotations(
     Returns:
         DataFrame with annotations plus paperItemID column.
     """
-    ids_str = ", ".join(str(i) for i in item_ids)
+    placeholders = ",".join("?" * len(item_ids))
     query = f"""
     SELECT ia.*, iatt.parentItemID AS paperItemID
     FROM itemAnnotations ia
     JOIN itemAttachments iatt ON ia.parentItemID = iatt.itemID
-    WHERE iatt.parentItemID IN ({ids_str})
+    WHERE iatt.parentItemID IN ({placeholders})
     ORDER BY ia.sortIndex
     """
-    return db.query(query)
+    return db.query(query, list(item_ids))
 
 
 def make_item_dirname(item_row: dict) -> str:
@@ -247,9 +239,7 @@ def bake_annotations(
         rects = position.get("rects", [])
 
         if page_index >= len(doc):
-            warnings.append(
-                f"Page {page_index} out of range for annotation {ann['itemID']}"
-            )
+            warnings.append(f"Page {page_index} out of range for annotation {ann['itemID']}")
             continue
 
         page = doc[page_index]
@@ -432,7 +422,7 @@ def _resolve_attachment_pdfs(
     attachments: pl.DataFrame,
     item_id: int,
     storage_dir: Path,
-    base_dir: Path | None,
+    pdfs_dir: Path | None,
     warnings: list[str],
     title: str,
 ) -> list[tuple[int, Path]]:
@@ -444,9 +434,7 @@ def _resolve_attachment_pdfs(
     resolved = []
     for att in item_atts.iter_rows(named=True):
         try:
-            pdf_path = resolve_pdf_path(
-                storage_dir, att["key"], att["path"], base_dir=base_dir
-            )
+            pdf_path = resolve_pdf_path(storage_dir, att["key"], att["path"], pdfs_dir=pdfs_dir)
             if pdf_path.exists():
                 resolved.append((att["itemID"], pdf_path))
         except ValueError as e:
@@ -517,7 +505,7 @@ def export_collection(
     db: ZoteroDatabase,
     collection_name: str,
     output_dir: Path,
-    base_dir: Path | None = None,
+    pdfs_dir: Path | None = None,
     console=None,
 ) -> tuple[int, int, list[str]]:
     """Export collection items with annotated PDFs and markdown.
@@ -529,7 +517,7 @@ def export_collection(
         db: ZoteroDatabase instance.
         collection_name: Name of the Zotero collection.
         output_dir: Root output directory.
-        base_dir: Base directory for linked attachments.
+        pdfs_dir: Base directory for linked attachments.
         console: Rich console for output (optional).
 
     Returns:
@@ -567,7 +555,7 @@ def export_collection(
         item_anns = annotations.filter(pl.col("paperItemID") == item_id)
 
         att_pdfs = _resolve_attachment_pdfs(
-            attachments, item_id, storage_dir, base_dir, warnings, title
+            attachments, item_id, storage_dir, pdfs_dir, warnings, title
         )
 
         if _export_item(item, item_anns, att_pdfs, output_dir, warnings, console):
@@ -578,28 +566,24 @@ def export_collection(
     # Export standalone attachments
     for att in standalone.iter_rows(named=True):
         att_id = att["itemID"]
-        title = _strip_review_prefix(
-            Path(att["title"]).stem if att["title"] else "untitled"
-        )
+        title = _strip_review_prefix(Path(att["title"]).stem if att["title"] else "untitled")
 
         # Resolve PDF path
         att_pdfs = []
         try:
-            pdf_path = resolve_pdf_path(
-                storage_dir, att["key"], att["path"], base_dir=base_dir
-            )
+            pdf_path = resolve_pdf_path(storage_dir, att["key"], att["path"], pdfs_dir=pdfs_dir)
             if pdf_path.exists():
                 att_pdfs = [(att_id, pdf_path)]
         except ValueError as e:
             warnings.append(f"{title}: {e}")
 
         # Get annotations directly on this attachment
-        att_anns_query = f"""
+        att_anns_query = """
         SELECT * FROM itemAnnotations
-        WHERE parentItemID = {att_id}
+        WHERE parentItemID = ?
         ORDER BY sortIndex
         """
-        att_anns = db.query(att_anns_query)
+        att_anns = db.query(att_anns_query, [att_id])
 
         # Build a minimal item-like dict for directory naming and markdown
         item_row = {

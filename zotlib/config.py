@@ -54,14 +54,15 @@ def discover_zotero_database() -> Path | None:
 
 
 def _windows_to_wsl_path(win_path: str) -> Path:
-    """Convert a Windows path like 'I:\\My Drive\\zotero-pdfs' to WSL '/mnt/i/My Drive/zotero-pdfs'."""
+    """Convert a Windows path to a WSL /mnt/ path."""
     from pathlib import PureWindowsPath
+
     p = PureWindowsPath(win_path)
     drive = p.drive.rstrip(":").lower()
     return Path(f"/mnt/{drive}") / p.relative_to(p.anchor)
 
 
-def discover_pdfs_dir(db_path: Path | None = None, check_exists: bool = True) -> Path | None:
+def discover_pdfs_dir(check_exists: bool = True) -> Path | None:
     """Discover the linked attachments directory from Zotero preferences.
 
     Reads baseAttachmentPath from prefs.js in the Zotero profile directory.
@@ -122,9 +123,7 @@ def get_database_path(explicit_path: Path | str | None = None) -> Path:
         path = Path(env_path)
         if path.exists():
             return path
-        raise FileNotFoundError(
-            f"ZOTERO_DATABASE path does not exist: {path}"
-        )
+        raise FileNotFoundError(f"ZOTERO_DATABASE path does not exist: {path}")
 
     # Check config file
     config = load_config()

@@ -1,35 +1,34 @@
 """Command-line interface for zotlib."""
 
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
+import polars as pl
 import typer
 from rich.console import Console
 from rich.table import Table
 
-import polars as pl
-
+from zotlib.backup import create_backup, default_backup_path
 from zotlib.config import (
+    CONFIG_FILE,
+    discover_pdfs_dir,
+    discover_zotero_database,
     get_database_path,
     get_pdfs_dir,
-    discover_zotero_database,
-    discover_pdfs_dir,
-    write_config,
     load_config,
-    CONFIG_FILE,
+    write_config,
 )
-from zotlib.database import ZoteroDatabase
-from zotlib.extractors import (
-    extract_items,
-    extract_creators,
-    extract_collections,
-    extract_libraries,
-    extract_cv_items,
-)
-from zotlib.backup import create_backup, default_backup_path
 from zotlib.covers import generate_covers, generate_thumbnails
-from zotlib.formatters.apa import format_cv_as_apa
+from zotlib.database import ZoteroDatabase
 from zotlib.export import export_collection
+from zotlib.extractors import (
+    extract_collections,
+    extract_creators,
+    extract_cv_items,
+    extract_items,
+    extract_libraries,
+)
+from zotlib.formatters.apa import format_cv_as_apa
 from zotlib.tables import ALL_SCHEMAS, CORE_SCHEMAS, SCHEMA_MAP
 
 app = typer.Typer(
@@ -90,11 +89,11 @@ def init():
 @app.command("show-tables")
 def show_tables(
     table_name: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(help="Table name to show schema for (optional)"),
     ] = None,
     database: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
     ] = None,
     all: Annotated[
@@ -139,7 +138,9 @@ def show_tables(
                 for i, (col, col_def) in enumerate(s.columns.items()):
                     table.add_row(
                         s.name if i == 0 else "",
-                        col, col_def.type, col_def.description,
+                        col,
+                        col_def.type,
+                        col_def.description,
                     )
                 wide.print(table)
                 return
@@ -159,11 +160,10 @@ def show_tables(
         wide.print(table)
 
 
-
 @app.command("show-collections")
 def show_collections(
     database: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
     ] = None,
 ):
@@ -197,7 +197,7 @@ def show_collections(
 @app.command("export-annotations")
 def export_annotations(
     database: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
     ] = None,
     output_dir: Annotated[
@@ -208,8 +208,8 @@ def export_annotations(
         str,
         typer.Option("--collection", "-c", help="Collection name"),
     ] = ...,
-    base_dir: Annotated[
-        Optional[Path],
+    pdfs_dir: Annotated[
+        Path | None,
         typer.Option("--pdfs-dir", "-p", help="Directory for linked PDF attachments"),
     ] = None,
 ):
@@ -228,21 +228,21 @@ def export_annotations(
     console.print(f"Using database: {db_path}")
 
     db = ZoteroDatabase(db_path)
-    if base_dir is None:
-        base_dir = get_pdfs_dir()
-        if base_dir:
-            console.print(f"Using linked PDFs directory: {base_dir}")
+    if pdfs_dir is None:
+        pdfs_dir = get_pdfs_dir()
+        if pdfs_dir:
+            console.print(f"Using linked PDFs directory: {pdfs_dir}")
     collection_dir = output_dir / collection
 
     exported, skipped, warnings = export_collection(
-        db, collection, collection_dir, base_dir=base_dir, console=console
+        db, collection, collection_dir, pdfs_dir=pdfs_dir, console=console
     )
 
     console.print(f"\nExported {exported} items to {collection_dir}")
     if skipped:
         console.print(f"[yellow]Skipped {skipped} items (no PDF or annotations)[/yellow]")
     if warnings:
-        console.print(f"[yellow]Warnings:[/yellow]")
+        console.print("[yellow]Warnings:[/yellow]")
         for w in warnings:
             console.print(f"  - {w}")
 
@@ -250,7 +250,7 @@ def export_annotations(
 @app.command("export-apa")
 def export_apa(
     database: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
     ] = None,
     output_dir: Annotated[
@@ -287,7 +287,7 @@ def export_apa(
 @app.command("export-covers")
 def export_covers(
     database: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
     ] = None,
     output_dir: Annotated[
@@ -298,8 +298,8 @@ def export_covers(
         str,
         typer.Option("--collection", "-c", help="Collection name"),
     ] = ...,
-    base_dir: Annotated[
-        Optional[Path],
+    pdfs_dir: Annotated[
+        Path | None,
         typer.Option("--pdfs-dir", "-p", help="Directory for linked PDF attachments"),
     ] = None,
     dpi: Annotated[
@@ -326,15 +326,13 @@ def export_covers(
     console.print(f"Using database: {db_path}")
 
     db = ZoteroDatabase(db_path)
-    if base_dir is None:
-        base_dir = get_pdfs_dir()
-        if base_dir:
-            console.print(f"Using linked PDFs directory: {base_dir}")
+    if pdfs_dir is None:
+        pdfs_dir = get_pdfs_dir()
+        if pdfs_dir:
+            console.print(f"Using linked PDFs directory: {pdfs_dir}")
     fullsize_dir = output_dir / collection / "fullsize"
 
-    cover_paths, skipped = generate_covers(
-        db, collection, fullsize_dir, dpi=dpi, base_dir=base_dir
-    )
+    cover_paths, skipped = generate_covers(db, collection, fullsize_dir, dpi=dpi, pdfs_dir=pdfs_dir)
     console.print(f"Generated {len(cover_paths)} cover images in {fullsize_dir}")
 
     # Generate thumbnails
@@ -343,8 +341,8 @@ def export_covers(
         count = generate_thumbnails(fullsize_dir, thumbs_dir, width=thumbnail_width)
         console.print(f"Generated {count} thumbnails ({thumbnail_width}px wide) in {thumbs_dir}")
 
-    # Add cover paths to collection CSV
-    csv_dir = Path("output/export-csv")
+    # Add cover paths to collection CSV (sibling export-csv directory)
+    csv_dir = output_dir.parent / "export-csv"
     csv_dir.mkdir(parents=True, exist_ok=True)
     csv_path = csv_dir / f"{collection}.csv"
     if csv_path.exists():
@@ -368,7 +366,7 @@ def export_covers(
 @app.command("export-csv")
 def export_csv(
     database: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
     ] = None,
     output_dir: Annotated[
@@ -376,7 +374,7 @@ def export_csv(
         typer.Option("--output", "-o", help="Output directory"),
     ] = Path("output/export-csv"),
     collection: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--collection", "-c", help="Filter to collection name"),
     ] = None,
 ):
@@ -421,11 +419,11 @@ def export_csv(
 @app.command()
 def backup(
     database: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--database", "-d", help="Path to zotero.sqlite"),
     ] = None,
     output: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--output", "-o", help="Output archive path"),
     ] = None,
 ):

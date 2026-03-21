@@ -127,7 +127,10 @@ def _clean_items(items: pl.DataFrame) -> pl.DataFrame:
     # Clean encoded characters in pages
     if "pages" in items.columns:
         items = items.with_columns(
-            pl.col("pages").fill_null("").str.replace_all("\u2013", "-", literal=True).alias("pages")
+            pl.col("pages")
+            .fill_null("")
+            .str.replace_all("\u2013", "-", literal=True)
+            .alias("pages")
         )
 
     return items
@@ -136,9 +139,7 @@ def _clean_items(items: pl.DataFrame) -> pl.DataFrame:
 def _add_authors(items: pl.DataFrame, creators: pl.DataFrame) -> pl.DataFrame:
     """Add concatenated authors string to items."""
     item_creators = (
-        creators.with_columns(
-            (pl.col("firstName") + " " + pl.col("lastName")).alias("authors")
-        )
+        creators.with_columns((pl.col("firstName") + " " + pl.col("lastName")).alias("authors"))
         .group_by("itemID")
         .agg(pl.col("authors").str.join(", "))
     )
@@ -201,9 +202,7 @@ def extract_cv_items(
     creators = extract_creators(db)
 
     # Filter by collection
-    cv_item_ids = collections.filter(
-        pl.col("collectionName") == collection_name
-    )["itemID"]
+    cv_item_ids = collections.filter(pl.col("collectionName") == collection_name)["itemID"]
     cv_items = items.filter(pl.col("itemID").is_in(cv_item_ids))
 
     # Add authors and clean data
