@@ -122,9 +122,9 @@ def show_tables(
         for name in sorted(table_names):
             schema = SCHEMA_MAP.get(name)
             desc = schema.description if schema else ""
-            cols = ", ".join(schema.columns.keys()) if schema else ""
-            if len(cols) > 80:
-                cols = cols[:80].rsplit(", ", 1)[0] + ", ..."
+            cols = ",".join(schema.columns.keys()) if schema else ""
+            if len(cols) > 132:
+                cols = cols[:132].rsplit(",", 1)[0] + ",..."
             table.add_row(name, desc, cols)
         wide.print(table)
     elif table_name:
@@ -152,9 +152,9 @@ def show_tables(
         table.add_column("Description", no_wrap=True)
         table.add_column("Columns")
         for s in CORE_SCHEMAS:
-            cols = ", ".join(s.columns.keys())
-            if len(cols) > 80:
-                cols = cols[:80].rsplit(", ", 1)[0] + ", ..."
+            cols = ",".join(s.columns.keys())
+            if len(cols) > 132:
+                cols = cols[:132].rsplit(",", 1)[0] + ",..."
             table.add_row(s.name, s.description, cols)
         wide.print(table)
 

@@ -28,7 +28,7 @@ class Table:
 # Core item tables
 ITEMS = Table(
     name="items",
-    description="Base table for all Zotero items (papers, books, etc.)",
+    description="All Zotero items (papers, books, ...)",
     columns={
         "itemID": Column("INTEGER", "Primary key"),
         "itemTypeID": Column("INTEGER", "Foreign key to itemTypes"),
@@ -45,7 +45,7 @@ ITEMS = Table(
 
 ITEM_DATA = Table(
     name="itemData",
-    description="Links items to their field values (title, date, DOI, etc.)",
+    description="Item-to-field-value links (title, DOI, ...)",
     columns={
         "itemID": Column("INTEGER", "Foreign key to items"),
         "fieldID": Column("INTEGER", "Foreign key to fieldsCombined"),
@@ -56,7 +56,7 @@ ITEM_DATA = Table(
 
 ITEM_DATA_VALUES = Table(
     name="itemDataValues",
-    description="Stores actual field values (deduplicated)",
+    description="Field values (deduplicated)",
     columns={
         "valueID": Column("INTEGER", "Primary key"),
         "value": Column("TEXT", "The actual field value text"),
@@ -66,7 +66,7 @@ ITEM_DATA_VALUES = Table(
 
 FIELDS_COMBINED = Table(
     name="fieldsCombined",
-    description="Field definitions (title, date, DOI, volume, etc.)",
+    description="Field definitions (title, DOI, volume, ...)",
     columns={
         "fieldID": Column("INTEGER", "Primary key"),
         "fieldName": Column("TEXT", "Internal field name (e.g., 'title', 'DOI')"),
@@ -79,7 +79,7 @@ FIELDS_COMBINED = Table(
 
 ITEM_TYPES = Table(
     name="itemTypes",
-    description="Item type definitions (journalArticle, book, etc.)",
+    description="Item types (journalArticle, book, ...)",
     columns={
         "itemTypeID": Column("INTEGER", "Primary key"),
         "typeName": Column("TEXT", "Internal type name"),
@@ -92,11 +92,11 @@ ITEM_TYPES = Table(
 # Creator tables
 ITEM_CREATORS = Table(
     name="itemCreators",
-    description="Links items to their creators (authors, editors, etc.)",
+    description="Item-to-creator links (authors, editors, ...)",
     columns={
         "itemID": Column("INTEGER", "Foreign key to items"),
         "creatorID": Column("INTEGER", "Foreign key to creators"),
-        "creatorTypeID": Column("INTEGER", "Type of creator (author, editor, etc.)"),
+        "creatorTypeID": Column("INTEGER", "Type of creator (author, editor, ...)"),
         "orderIndex": Column("INTEGER", "Position in author list"),
     },
     core=True,
@@ -128,7 +128,7 @@ COLLECTION_ITEMS = Table(
 
 COLLECTIONS = Table(
     name="collections",
-    description="Collection (folder) definitions",
+    description="Collections (folders)",
     columns={
         "collectionID": Column("INTEGER", "Primary key"),
         "collectionName": Column("TEXT", "Display name"),
@@ -145,7 +145,7 @@ COLLECTIONS = Table(
 # Library tables
 LIBRARIES = Table(
     name="libraries",
-    description="Library definitions (personal, group libraries)",
+    description="Libraries (personal, group)",
     columns={
         "libraryID": Column("INTEGER", "Primary key"),
         "type": Column("TEXT", "Library type (user, group)"),
@@ -162,7 +162,7 @@ LIBRARIES = Table(
 # Attachment tables
 ITEM_ATTACHMENTS = Table(
     name="itemAttachments",
-    description="PDF and file attachments linked to items",
+    description="File attachments (PDFs, ...)",
     columns={
         "itemID": Column("INTEGER", "Primary key (the attachment item)"),
         "parentItemID": Column("INTEGER", "Foreign key to the parent item"),
@@ -181,7 +181,7 @@ ITEM_ATTACHMENTS = Table(
 # Annotation tables
 ITEM_ANNOTATIONS = Table(
     name="itemAnnotations",
-    description="PDF annotations created in Zotero's built-in reader",
+    description="PDF annotations (highlights, notes, ...)",
     columns={
         "itemID": Column("INTEGER", "Primary key (the annotation item)"),
         "parentItemID": Column("INTEGER", "Foreign key to the PDF attachment item"),
@@ -255,7 +255,7 @@ COLLECTION_RELATIONS = Table(
 
 RELATION_PREDICATES = Table(
     name="relationPredicates",
-    description="Predicate types for relations (dc:relation, owl:sameAs, etc.)",
+    description="Predicate types for relations (dc:relation, owl:sameAs, ...)",
     columns={
         "predicateID": Column("INTEGER", "Primary key"),
         "predicate": Column("TEXT", "Predicate URI"),
@@ -340,7 +340,7 @@ ITEM_TYPES_COMBINED = Table(
 # Creator type tables
 CREATOR_TYPES = Table(
     name="creatorTypes",
-    description="Creator role definitions (author, editor, translator, etc.)",
+    description="Creator role definitions (author, editor, translator, ...)",
     columns={
         "creatorTypeID": Column("INTEGER", "Primary key"),
         "creatorType": Column("TEXT", "Role name"),
@@ -622,7 +622,7 @@ PUBLICATIONS_ITEMS = Table(
 # Sync tables
 SYNC_OBJECT_TYPES = Table(
     name="syncObjectTypes",
-    description="Object type definitions for sync (item, collection, search, etc.)",
+    description="Object type definitions for sync (item, collection, search, ...)",
     columns={
         "syncObjectTypeID": Column("INTEGER", "Primary key"),
         "name": Column("TEXT", "Object type name"),
