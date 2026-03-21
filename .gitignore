@@ -18,6 +18,9 @@ build/
 .pytest_cache
 .coverage
 
+# Linting
+.ruff_cache
+
 # Data/output
 data
 output/
