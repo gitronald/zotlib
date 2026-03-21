@@ -38,11 +38,33 @@ uv sync
 
 ## Configuration
 
-The database path can be configured via:
+Run `zotlib init` to auto-discover Zotero paths and save them to `zotlib.toml`:
 
-1. **CLI flag**: `--database /path/to/zotero.sqlite`
-2. **Environment variable**: `ZOTERO_DATABASE=/path/to/zotero.sqlite`
-3. **Auto-discovery**: Checks common locations (Linux, WSL, macOS)
+```bash
+zotlib init
+```
+
+```
+database: /mnt/c/Users/rer/Zotero/zotero.sqlite
+pdfs_dir: /mnt/i/My Drive/zotero-pdfs
+
+Saved to zotlib.toml
+```
+
+The config file stores the database and linked PDFs directory:
+
+```toml
+[zotlib]
+database = "/path/to/zotero.sqlite"
+pdfs_dir = "/path/to/linked-pdfs"
+```
+
+Path resolution priority (for both database and PDFs dir):
+
+1. **CLI flag**: `--database`, `--pdfs-dir`
+2. **Environment variable**: `ZOTERO_DATABASE`
+3. **Config file**: `zotlib.toml`
+4. **Auto-discovery**: Checks common locations (Linux, WSL, macOS)
 
 ## CLI Commands
 
