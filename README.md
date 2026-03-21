@@ -19,7 +19,7 @@ zotlib/
 │   └── formatters/apa.py        # APA citation formatter
 ├── scripts/                     # Utility scripts
 │   ├── extract-annotations.js   # Annotation extractor (interactive + headless)
-│   ├── create-parents-for-standalone.js
+│   ├── create-parent-item.js    # Create parents for standalone PDFs
 │   ├── run-extract.sh           # Shell wrapper for headless extraction
 │   └── generate_schema_docs.py  # Generate docs/schema.md
 ├── docs/                        # Documentation
@@ -141,7 +141,7 @@ apa_output = format_cv_as_apa(items, output_path="output/apa.md")
 
 **WIP** — Utilities for Zotero's JavaScript console (Tools > Developer > Run JavaScript). The Zotero SQLite database should never be modified directly via Python — use these JS scripts (which run through Zotero's API) for any write operations.
 
-### create-parents-for-standalone.js
+### create-parent-item.js
 
 Creates parent document items for standalone PDF attachments in a collection. Useful when PDFs were added directly without metadata — creates a parent item using the filename as the title and re-parents the attachment.
 
