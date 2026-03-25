@@ -1,5 +1,6 @@
 # TODO
 
+- [ ] Add repository to [project.urls] section in pyproject.toml for pip homepage (no plan)
 - [ ] Test JS scripts across Windows/macOS and experiment with record modification (no plan)
 - [x] Code review cleanup: naming, SQL params, dead code, tests ([plan](.claude/plans/011-code-review-cleanup.md))
 - [x] Reorganize `zotero-js/` folder into `scripts/` ([plan](.claude/plans/010-reorganize-zotero-js.md))
