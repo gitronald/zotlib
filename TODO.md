@@ -18,3 +18,8 @@
 - [x] Rename `reviews.py` to `export.py` ([plan](docs/plans/003-export-reviews.md))
 - [x] Create parent items for standalone attachments via Zotero JS (no plan)
 - [x] Extract titles from PDFs for untitled items ([plan](docs/plans/003-export-reviews.md))
+- [x] Consolidate plan and summary system ([plan](docs/plans/005-consolidate-plans.md))
+- [x] Add backup command ([plan](docs/plans/004-backup-command.md))
+- [x] Migrate from Poetry to uv ([plan](docs/plans/002-poetry-to-uv.md))
+- [x] PDF covers pipeline ([plan](docs/plans/001-pdf-covers-pipeline.md))
+- [x] Zotlib library conversion ([plan](docs/plans/000-library-conversion.md))
