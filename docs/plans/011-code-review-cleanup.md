@@ -6,6 +6,8 @@ completed: 2026-03-21T14:19:25-07:00
 pr: https://github.com/gitronald/zotlib/pull/6
 ---
 
+# Code review and cleanup
+
 ## Context
 
 Code review scan identified several cleanup items across the codebase: naming inconsistencies, unsafe SQL patterns, dead code, silent error handling, and test gaps.

@@ -6,6 +6,8 @@ completed: 2026-03-21T12:12:26-07:00
 pr: https://github.com/gitronald/zotlib/pull/6
 ---
 
+# Reorganize Zotero JS scripts
+
 ## Context
 
 The `zotero-js/` directory contains 5 Zotero JavaScript/shell scripts that sit at the project root as a separate folder. The goal is to consolidate them into the existing `scripts/` directory (which currently has `generate_schema_docs.py`) so all utility scripts live in one place.

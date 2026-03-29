@@ -4,8 +4,8 @@
 
 | Plan | Title | Status | Branch | Created | Completed | PR |
 |------|-------|--------|--------|---------|-----------|----|
-| 011 | [011-code-review-cleanup](plans/011-code-review-cleanup.md) | done | dev | 2026-03-21 | 2026-03-21 | [#6](https://github.com/gitronald/zotlib/pull/6) |
-| 010 | [010-reorganize-zotero-js](plans/010-reorganize-zotero-js.md) | done | dev | 2026-03-21 | 2026-03-21 | [#6](https://github.com/gitronald/zotlib/pull/6) |
+| 011 | [Code review and cleanup](plans/011-code-review-cleanup.md) | done | dev | 2026-03-21 | 2026-03-21 | [#6](https://github.com/gitronald/zotlib/pull/6) |
+| 010 | [Reorganize Zotero JS scripts](plans/010-reorganize-zotero-js.md) | done | dev | 2026-03-21 | 2026-03-21 | [#6](https://github.com/gitronald/zotlib/pull/6) |
 | 009 | [Plan](plans/009-init-command.md) | done | dev | 2026-03-19 | 2026-03-20 | [#6](https://github.com/gitronald/zotlib/pull/6) |
 | 008 | [Plan](plans/008-restructure-cli-commands.md) | done | feature/export-annotated-pdfs | 2026-03-19 | 2026-03-19 | [#4](https://github.com/gitronald/zotlib/pull/4) |
 | 007 | [Plan](plans/007-cli-polish.md) | done | feature/export-annotated-pdfs | 2026-03-19 | 2026-03-19 | [#4](https://github.com/gitronald/zotlib/pull/4) |
