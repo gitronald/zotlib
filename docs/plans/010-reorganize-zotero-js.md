@@ -1,4 +1,6 @@
 ---
+id: 10
+slug: reorganize-zotero-js
 status: done
 branch: dev
 created: 2026-03-21T12:01:53-07:00

@@ -1,4 +1,6 @@
 ---
+id: 1
+slug: pdf-covers-pipeline
 status: done
 branch: dev-pdf-covers
 created: 2025-01-31T00:00:00-08:00

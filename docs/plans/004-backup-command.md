@@ -1,4 +1,6 @@
 ---
+id: 4
+slug: backup-command
 status: done
 branch: dev
 created: 2026-03-02T00:00:00-08:00

@@ -1,4 +1,6 @@
 ---
+id: 6
+slug: pandas-to-polars
 status: done
 branch: feature/pandas-to-polars
 created: 2026-03-19T10:56:45-07:00
@@ -6,8 +8,7 @@ completed: 2026-03-19T11:48:51-07:00
 pr: https://github.com/gitronald/zotlib/pull/4
 ---
 
-# Plan
-
+# Convert pandas to polars
 Convert all pandas usage in zotlib to polars.
 
 ## Scope

@@ -1,4 +1,6 @@
 ---
+id: 7
+slug: cli-polish
 status: done
 branch: feature/export-annotated-pdfs
 created: 2026-03-19T12:07:12-07:00
@@ -6,8 +8,7 @@ completed: 2026-03-19T12:07:12-07:00
 pr: https://github.com/gitronald/zotlib/pull/4
 ---
 
-# Plan
-
+# Polish CLI schema command and output directories
 Polish CLI commands found during review of the feature/export-annotated-pdfs branch.
 
 ## Changes

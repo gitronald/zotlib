@@ -1,4 +1,6 @@
 ---
+id: 2
+slug: poetry-to-uv
 status: done
 branch: dev
 created: 2026-02-22T00:00:00-08:00
