@@ -4,6 +4,7 @@
 |---|---|---|---|---|
 | 013 | [Test Zotero JS scripts across Windows and macOS](plans/013-test-js-cross-platform/plan.md) | draft | — | — |
 | 012 | [Add a project.urls section to pyproject.toml for the pip homepage](plans/012-pyproject-urls/plan.md) | draft | — | — |
+| 014 | [Archive of completed tasks that predate plan tracking](plans/014-pre-planners-completed-tasks/plan.md) | done | 2026-06-08T12:47:45-07:00 | — |
 | 011 | [Code review and cleanup](plans/011-code-review-cleanup/plan.md) | done | 2026-03-21T14:19:25-07:00 | [#6](https://github.com/gitronald/zotlib/pull/6) |
 | 010 | [Reorganize Zotero JS scripts](plans/010-reorganize-zotero-js/plan.md) | done | 2026-03-21T12:12:26-07:00 | [#6](https://github.com/gitronald/zotlib/pull/6) |
 | 009 | [Add `zotlib init` command](plans/009-init-command/plan.md) | done | 2026-03-20T18:17:34-07:00 | [#6](https://github.com/gitronald/zotlib/pull/6) |
