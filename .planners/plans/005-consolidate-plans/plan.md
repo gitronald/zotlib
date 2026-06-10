@@ -4,7 +4,7 @@ slug: consolidate-plans
 status: done
 branch: dev
 created: 2026-03-06T00:00:00-07:00
-completed: 2026-03-06T17:39:39-08:00
+concluded: 2026-03-06T17:39:39-08:00
 pr: https://github.com/gitronald/zotlib/pull/6
 ---
 

@@ -4,7 +4,7 @@ slug: pdf-covers-pipeline
 status: done
 branch: dev-pdf-covers
 created: 2025-01-31T00:00:00-08:00
-completed: 2026-02-02T08:39:45-08:00
+concluded: 2026-02-02T08:39:45-08:00
 pr: https://github.com/gitronald/zotlib/pull/2
 ---
 

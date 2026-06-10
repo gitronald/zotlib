@@ -4,7 +4,7 @@ slug: init-command
 status: done
 branch: dev
 created: 2026-03-19T13:48:59-07:00
-completed: 2026-03-20T18:17:34-07:00
+concluded: 2026-03-20T18:17:34-07:00
 pr: https://github.com/gitronald/zotlib/pull/6
 ---
 

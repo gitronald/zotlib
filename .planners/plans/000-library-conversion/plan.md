@@ -4,7 +4,7 @@ slug: library-conversion
 status: done
 branch: dev
 created: 2025-01-19T00:00:00-08:00
-completed: 2026-01-19T01:08:54-08:00
+concluded: 2026-01-19T01:08:54-08:00
 pr: https://github.com/gitronald/zotlib/pull/1
 ---
 

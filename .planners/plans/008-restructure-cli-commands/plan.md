@@ -4,7 +4,7 @@ slug: restructure-cli-commands
 status: done
 branch: feature/export-annotated-pdfs
 created: 2026-03-19T12:22:59-07:00
-completed: 2026-03-19T14:04:51-07:00
+concluded: 2026-03-19T14:04:51-07:00
 pr: https://github.com/gitronald/zotlib/pull/4
 ---
 

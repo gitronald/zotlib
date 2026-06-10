@@ -4,7 +4,7 @@ slug: pyproject-urls
 status: draft
 branch:
 created: 2026-06-08T11:57:41-07:00
-completed:
+concluded:
 pr:
 ---
 

@@ -4,7 +4,7 @@ slug: pre-planners-completed-tasks
 status: done
 branch: null
 created: 2026-06-08T12:47:45-07:00
-completed: 2026-06-08T12:47:45-07:00
+concluded: 2026-06-08T12:47:45-07:00
 pr: null
 ---
 

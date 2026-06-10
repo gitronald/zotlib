@@ -4,7 +4,7 @@ slug: poetry-to-uv
 status: done
 branch: dev
 created: 2026-02-22T00:00:00-08:00
-completed: 2026-02-22T16:58:09-08:00
+concluded: 2026-02-22T16:58:09-08:00
 pr: https://github.com/gitronald/zotlib/pull/3
 ---
 

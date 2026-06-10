@@ -4,7 +4,7 @@ slug: backup-command
 status: done
 branch: dev
 created: 2026-03-02T00:00:00-08:00
-completed: 2026-03-02T12:30:28-08:00
+concluded: 2026-03-02T12:30:28-08:00
 pr: https://github.com/gitronald/zotlib/pull/4
 ---
 

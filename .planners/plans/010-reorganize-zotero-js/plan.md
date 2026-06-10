@@ -4,7 +4,7 @@ slug: reorganize-zotero-js
 status: done
 branch: dev
 created: 2026-03-21T12:01:53-07:00
-completed: 2026-03-21T12:12:26-07:00
+concluded: 2026-03-21T12:12:26-07:00
 pr: https://github.com/gitronald/zotlib/pull/6
 ---
 
