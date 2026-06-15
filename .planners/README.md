@@ -2,6 +2,7 @@
 
 | # | Plan | Status | Concluded | PR |
 |---|---|---|---|---|
+| 015 | [Research Zotero integration options beyond the SQLite read approach](plans/015-zotero-api-research/plan.md) | draft | — | — |
 | 013 | [Test Zotero JS scripts across Windows and macOS](plans/013-test-js-cross-platform/plan.md) | draft | — | — |
 | 012 | [Add a project.urls section to pyproject.toml for the pip homepage](plans/012-pyproject-urls/plan.md) | draft | — | — |
 | 014 | [Archive of completed tasks that predate plan tracking](plans/014-pre-planners-completed-tasks/plan.md) | done | 2026-06-08 12:47 PT | — |
