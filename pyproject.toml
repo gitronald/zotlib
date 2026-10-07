@@ -1,15 +1,15 @@
 [project]
 name = "zotlib"
-version = "0.4.5"
+version = "0.4.6"
 description = "Extract and format bibliographic data from Zotero databases"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "typer>=0.12.0",
     "rich>=13.0.0",
     "pymupdf>=1.26.7,<2.0.0",
-    "pillow>=12.1.0,<13.0.0",
-    "polars>=1.39.2",
+    "pillow>=12.3.0,<13.0.0",
+    "polars>=1.44.2",
 ]
 
 [project.scripts]
@@ -21,6 +21,7 @@ dev = [
     "ipykernel>=6.29.0",
     "ruff>=0.15.7",
     "pytest-cov>=7.1.0",
+    "pre-commit>=4.6.0",
 ]
 
 [build-system]
