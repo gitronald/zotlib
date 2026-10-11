@@ -1,6 +1,6 @@
 """Zotlib - Extract and format bibliographic data from Zotero databases."""
 
-__version__ = "0.4.7"
+__version__ = "0.4.8"
 
 from zotlib.database import ZoteroDatabase
 from zotlib.extractors import (
