@@ -30,3 +30,4 @@ zotlib.toml
 
 # Archive
 .archive/
+.worktrees/
