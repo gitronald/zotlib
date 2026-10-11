@@ -314,13 +314,24 @@ def export_covers(
         bool,
         typer.Option("--no-thumbnails", help="Skip thumbnail generation"),
     ] = False,
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help="Re-render every cover and thumbnail, not only those older than their source",
+        ),
+    ] = False,
 ):
     """Generate first-page cover images and thumbnails for PDFs in a collection.
+
+    A cover at least as new as its PDF, and a thumbnail at least as new as its
+    cover, is kept. Pass --force after changing --dpi or --thumb-width.
 
     Examples:
         zotlib export-covers -c publications
         zotlib export-covers -c publications -p "/mnt/i/My Drive/zotero-pdfs/"
         zotlib export-covers -c publications --no-thumbnails
+        zotlib export-covers -c publications --force
     """
     db_path = get_database_path(database)
     console.print(f"Using database: {db_path}")
@@ -332,14 +343,19 @@ def export_covers(
             console.print(f"Using linked PDFs directory: {pdfs_dir}")
     fullsize_dir = output_dir / collection / "fullsize"
 
-    cover_paths, skipped = generate_covers(db, collection, fullsize_dir, dpi=dpi, pdfs_dir=pdfs_dir)
-    console.print(f"Generated {len(cover_paths)} cover images in {fullsize_dir}")
+    cover_paths, skipped, rendered = generate_covers(
+        db, collection, fullsize_dir, dpi=dpi, pdfs_dir=pdfs_dir, force=force
+    )
+    console.print(
+        f"Rendered {rendered} of {len(cover_paths)} cover images in {fullsize_dir}"
+        f" ({len(cover_paths) - rendered} up to date)"
+    )
 
     # Generate thumbnails
     if not no_thumbnails:
         thumbs_dir = output_dir / collection / "thumbnails"
-        count = generate_thumbnails(fullsize_dir, thumbs_dir, width=thumbnail_width)
-        console.print(f"Generated {count} thumbnails ({thumbnail_width}px wide) in {thumbs_dir}")
+        count = generate_thumbnails(fullsize_dir, thumbs_dir, width=thumbnail_width, force=force)
+        console.print(f"Wrote {count} thumbnails ({thumbnail_width}px wide) in {thumbs_dir}")
 
     # Add cover paths to collection CSV (sibling export-csv directory)
     csv_dir = output_dir.parent / "export-csv"

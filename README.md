@@ -106,7 +106,8 @@ zotlib export-csv -c publications
 # Format a collection as APA references
 zotlib export-apa -c publications
 
-# Generate cover images and thumbnails
+# Generate cover images and thumbnails; a rerun renders only covers whose
+# PDF changed (--force re-renders all, e.g. after changing --dpi)
 zotlib export-covers -c publications
 
 # Export annotated PDFs and markdown notes
