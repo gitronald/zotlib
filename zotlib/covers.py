@@ -1,5 +1,6 @@
 """Generate cover images from first page of PDFs in a Zotero collection."""
 
+from collections.abc import Callable
 from pathlib import Path
 
 import fitz
@@ -10,15 +11,31 @@ from zotlib.extractors import extract_attachments, extract_collections, extract_
 from zotlib.paths import resolve_pdf_path
 
 
+def write_atomic(output_path: Path, write: Callable[[Path], None]) -> None:
+    """Write output_path through a sibling partial file renamed into place.
+
+    An interrupted write leaves no truncated file at output_path, which
+    is_current would otherwise take as up to date on every later run.
+    """
+    partial = output_path.with_name(f"{output_path.stem}.partial{output_path.suffix}")
+    try:
+        write(partial)
+        partial.replace(output_path)
+    finally:
+        partial.unlink(missing_ok=True)
+
+
 def render_first_page(pdf_path: Path, output_path: Path, dpi: int = 300) -> None:
     """Render the first page of a PDF as a PNG image."""
     doc = fitz.open(pdf_path)
-    page = doc[0]
-    zoom = dpi / 72
-    matrix = fitz.Matrix(zoom, zoom)
-    pixmap = page.get_pixmap(matrix=matrix)
-    pixmap.save(str(output_path))
-    doc.close()
+    try:
+        page = doc[0]
+        zoom = dpi / 72
+        matrix = fitz.Matrix(zoom, zoom)
+        pixmap = page.get_pixmap(matrix=matrix)
+        write_atomic(output_path, lambda path: pixmap.save(str(path)))
+    finally:
+        doc.close()
 
 
 def is_current(output_path: Path, source_path: Path) -> bool:
@@ -60,7 +77,7 @@ def generate_thumbnails(
         height = int(img.height * scale)
         thumb = img.resize((width, height), Image.Resampling.LANCZOS)
 
-        thumb.save(thumb_path)
+        write_atomic(thumb_path, lambda path: thumb.save(path, format="PNG"))
         count += 1
 
     return count
