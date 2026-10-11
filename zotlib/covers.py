@@ -21,20 +21,29 @@ def render_first_page(pdf_path: Path, output_path: Path, dpi: int = 300) -> None
     doc.close()
 
 
+def is_current(output_path: Path, source_path: Path) -> bool:
+    """Whether output_path exists and is at least as new as source_path."""
+    return output_path.exists() and output_path.stat().st_mtime >= source_path.stat().st_mtime
+
+
 def generate_thumbnails(
     input_dir: Path,
     output_dir: Path,
     width: int = 400,
+    force: bool = False,
 ) -> int:
     """Resize cover images to thumbnail size.
+
+    A thumbnail at least as new as its cover is kept, unless force is set.
 
     Args:
         input_dir: Directory containing full-size cover PNGs.
         output_dir: Directory to write thumbnails.
         width: Target width in pixels (height scales proportionally).
+        force: Regenerate every thumbnail.
 
     Returns:
-        Number of thumbnails generated.
+        Number of thumbnails written.
     """
     from PIL import Image
 
@@ -42,13 +51,16 @@ def generate_thumbnails(
     count = 0
 
     for png_path in sorted(input_dir.glob("*-cover.png")):
+        thumb_path = output_dir / (png_path.stem.replace("-cover", "-thumb") + ".png")
+        if not force and is_current(thumb_path, png_path):
+            continue
+
         img = Image.open(png_path)
         scale = width / img.width
         height = int(img.height * scale)
         thumb = img.resize((width, height), Image.Resampling.LANCZOS)
 
-        thumb_name = png_path.stem.replace("-cover", "-thumb") + ".png"
-        thumb.save(output_dir / thumb_name)
+        thumb.save(thumb_path)
         count += 1
 
     return count
@@ -60,12 +72,17 @@ def generate_covers(
     output_dir: Path,
     dpi: int = 300,
     pdfs_dir: Path | None = None,
-) -> tuple[dict[int, Path], list[str]]:
+    force: bool = False,
+) -> tuple[dict[int, Path], list[str], int]:
     """Generate first-page cover images for all PDFs in a collection.
+
+    A cover at least as new as its PDF is kept, unless force is set, so a
+    rerun writes only the covers whose PDF changed.
 
     Returns:
         Tuple of (dict mapping parentItemID to cover image path,
-                  list of skipped item descriptions).
+                  list of skipped item descriptions,
+                  number of covers rendered).
     """
     storage_dir = db.database_path.parent / "storage"
 
@@ -95,6 +112,7 @@ def generate_covers(
 
     cover_paths: dict[int, Path] = {}
     skipped = []
+    rendered = 0
 
     for row in attachments.iter_rows(named=True):
         parent_id = row["parentItemID"]
@@ -107,7 +125,9 @@ def generate_covers(
 
         bibkey = pdf_path.stem
         output_path = output_dir / f"{bibkey}-cover.png"
-        render_first_page(pdf_path, output_path, dpi=dpi)
+        if force or not is_current(output_path, pdf_path):
+            render_first_page(pdf_path, output_path, dpi=dpi)
+            rendered += 1
         cover_paths[parent_id] = output_path
 
-    return cover_paths, skipped
+    return cover_paths, skipped, rendered
