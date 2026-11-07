@@ -60,6 +60,7 @@ def extract_annotations(db: ZoteroDatabase) -> pd.DataFrame:
     """Extract PDF annotations from itemAnnotations table."""
     return db.query("SELECT * FROM itemAnnotations")
 
+
 def extract_tags(db: ZoteroDatabase) -> pd.DataFrame:
     """Extract item tags with tag names."""
     query = """
