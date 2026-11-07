@@ -1108,7 +1108,7 @@ wheels = [
 
 [[package]]
 name = "zotlib"
-version = "0.4.9"
+version = "0.4.10a0"
 source = { editable = "." }
 dependencies = [
     { name = "pillow" },
